@@ -37,6 +37,7 @@
     selectedId: null,
     editingId: null,
     currentMobileView: "schedule",
+    visibleStart: null,
     visibleEnd: null,
     searchSubmitted: false,
     filters: {
@@ -101,13 +102,13 @@
 
   const startOfToday = stripTime(new Date());
   const weekStart = getWeekStart(startOfToday);
-  const visibleStart = weekStart;
 
   init();
 
   function init() {
     registerServiceWorker();
     state.hearings = loadHearings();
+    state.visibleStart = weekStart;
     state.visibleEnd = getDefaultVisibleEnd();
     fillMonthSelect();
     els.monthSelect.value = String(startOfToday.getMonth());
@@ -503,7 +504,8 @@
     if (!Number.isInteger(month) || !Number.isInteger(year)) return;
 
     const target = new Date(year, month, 1);
-    ensureVisibleThrough(endOfMonth(target));
+    state.visibleStart = startOfMonth(target);
+    state.visibleEnd = endOfMonth(addMonths(target, 18));
     render();
     requestAnimationFrame(() => {
       document.getElementById(`month-${year}-${month}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -511,7 +513,8 @@
   }
 
   function scrollToToday() {
-    ensureVisibleThrough(startOfToday);
+    state.visibleStart = weekStart;
+    state.visibleEnd = getDefaultVisibleEnd();
     render();
     requestAnimationFrame(() => {
       document.getElementById(`day-${toDateKey(startOfToday)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -519,6 +522,9 @@
   }
 
   function ensureVisibleThrough(date) {
+    if (date < state.visibleStart) {
+      state.visibleStart = startOfMonth(date);
+    }
     if (date > state.visibleEnd) {
       state.visibleEnd = endOfMonth(addMonths(date, 3));
     }
@@ -526,7 +532,7 @@
 
   function getVisibleDays() {
     const days = [];
-    let day = new Date(visibleStart);
+    let day = new Date(state.visibleStart);
     while (day <= state.visibleEnd) {
       days.push(new Date(day));
       day = addDays(day, 1);
@@ -539,7 +545,7 @@
   }
 
   function updateRangeLabel() {
-    els.rangeLabel.textContent = `${formatShortDate(visibleStart)} ${visibleStart.getFullYear()}. - ${formatShortDate(state.visibleEnd)} ${state.visibleEnd.getFullYear()}.`;
+    els.rangeLabel.textContent = `${formatShortDate(state.visibleStart)} ${state.visibleStart.getFullYear()}. - ${formatShortDate(state.visibleEnd)} ${state.visibleEnd.getFullYear()}.`;
   }
 
   function fillMonthSelect() {
@@ -586,6 +592,10 @@
     const result = new Date(date);
     result.setMonth(result.getMonth() + months);
     return result;
+  }
+
+  function startOfMonth(date) {
+    return stripTime(new Date(date.getFullYear(), date.getMonth(), 1));
   }
 
   function endOfMonth(date) {
