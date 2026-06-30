@@ -89,6 +89,7 @@
   init();
 
   function init() {
+    registerServiceWorker();
     state.hearings = loadHearings();
     state.visibleEnd = getDefaultVisibleEnd();
     fillMonthSelect();
@@ -564,5 +565,12 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
   }
 })();

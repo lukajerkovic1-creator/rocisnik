@@ -1,0 +1,19 @@
+{
+  "name": "Ročišnik",
+  "short_name": "Ročišnik",
+  "description": "Lokalni raspored ročišta za mobitel i računalo.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f8",
+  "theme_color": "#0f6b63",
+  "lang": "hr",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
