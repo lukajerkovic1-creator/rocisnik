@@ -158,13 +158,13 @@
         updatedAt: now
       };
       state.hearings.push(hearing);
-      state.selectedId = hearing.id;
+      state.selectedId = null;
       showFormMessage("Ročište je dodano.", "success");
     }
 
     saveHearings();
     resetForm({ keepMessage: true });
-    setMobileView("details");
+    setMobileView(state.selectedId ? "details" : "schedule");
     render();
   }
 
@@ -288,7 +288,7 @@
     if (!hearing) {
       els.detailsEmpty.hidden = false;
       els.detailsContent.hidden = true;
-      els.detailsSubtitle.textContent = "Odaberi ročište iz rasporeda.";
+      els.detailsSubtitle.textContent = "Odaberi raspravu za prikaz detalja.";
       return;
     }
 
