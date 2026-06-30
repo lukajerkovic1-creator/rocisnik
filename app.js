@@ -38,6 +38,7 @@
     editingId: null,
     currentMobileView: "schedule",
     visibleEnd: null,
+    searchSubmitted: false,
     filters: {
       plaintiff: "",
       defendant: "",
@@ -65,6 +66,7 @@
     },
     searchButton: document.getElementById("searchButton"),
     clearFiltersButton: document.getElementById("clearFiltersButton"),
+    searchResults: document.getElementById("searchResults"),
     form: document.getElementById("hearingForm"),
     formTitle: document.getElementById("formTitle"),
     formMessage: document.getElementById("formMessage"),
@@ -228,6 +230,7 @@
   function render() {
     updateRangeLabel();
     renderCalendar();
+    renderSearchResults();
     renderDetails();
     updateFormMode();
   }
@@ -299,6 +302,53 @@
       render();
     });
     return button;
+  }
+
+  function createSearchResultButton(hearing) {
+    const date = new Date(hearing.hearingDateTime);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "search-result-button";
+    if (hearing.id === state.selectedId) button.classList.add("selected");
+    button.innerHTML = `
+      <span class="search-result-date">${formatLongDateTime(date)}</span>
+      <span class="search-result-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
+      <span class="search-result-meta">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}${hearing.disputeSubject ? ` | ${escapeHtml(hearing.disputeSubject)}` : ""}</span>
+    `;
+    button.addEventListener("click", () => {
+      state.selectedId = hearing.id;
+      setMobileView("details");
+      render();
+    });
+    return button;
+  }
+
+  function renderSearchResults() {
+    els.searchResults.replaceChildren();
+
+    if (!state.searchSubmitted) {
+      const hint = document.createElement("div");
+      hint.className = "search-empty";
+      hint.textContent = "Upiši kriterij i pritisni Pretraži.";
+      els.searchResults.append(hint);
+      return;
+    }
+
+    const results = getSearchResults();
+    const heading = document.createElement("p");
+    heading.className = "search-results-heading";
+    heading.textContent = results.length === 1 ? "1 pronađena rasprava" : `${results.length} pronađenih rasprava`;
+    els.searchResults.append(heading);
+
+    if (results.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "search-empty";
+      empty.textContent = "Nema rasprava koje odgovaraju pretrazi.";
+      els.searchResults.append(empty);
+      return;
+    }
+
+    results.forEach((hearing) => els.searchResults.append(createSearchResultButton(hearing)));
   }
 
   function renderDetails() {
@@ -425,7 +475,7 @@
       state.filters[key] = "";
       els.filters[key].value = "";
     });
-    setMobileView("schedule");
+    state.searchSubmitted = false;
     render();
   }
 
@@ -433,8 +483,18 @@
     Object.entries(els.filters).forEach(([key, input]) => {
       state.filters[key] = normalizeSearch(input.value);
     });
-    setMobileView("schedule");
+    state.searchSubmitted = true;
     render();
+    requestAnimationFrame(() => {
+      els.searchResults.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function getSearchResults() {
+    if (!hasActiveFilters()) return [];
+    return state.hearings
+      .filter(matchesFilters)
+      .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
   }
 
   function jumpToSelectedMonth() {
