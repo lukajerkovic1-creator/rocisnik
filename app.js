@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "rocisnik.hearings.v1";
   const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
+  const BACKUP_FORMAT_VERSION = 1;
   const DAY_NAMES = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
   const MONTH_NAMES_GENITIVE = [
     "siječnja",
@@ -57,6 +58,11 @@
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
+    exportJsonButton: document.getElementById("exportJsonButton"),
+    importJsonButton: document.getElementById("importJsonButton"),
+    importJsonFile: document.getElementById("importJsonFile"),
+    importModeInputs: Array.from(document.querySelectorAll('input[name="importMode"]')),
+    backupMessage: document.getElementById("backupMessage"),
     monthSelect: document.getElementById("monthSelect"),
     yearInput: document.getElementById("yearInput"),
     jumpButton: document.getElementById("jumpButton"),
@@ -123,6 +129,9 @@
     els.form.addEventListener("submit", handleSubmit);
     els.dataSafetyButton.addEventListener("click", showDataNotice);
     els.dismissDataNoticeButton.addEventListener("click", dismissDataNotice);
+    els.exportJsonButton.addEventListener("click", exportJsonBackup);
+    els.importJsonButton.addEventListener("click", () => els.importJsonFile.click());
+    els.importJsonFile.addEventListener("change", handleImportFile);
     els.cancelEditButton.addEventListener("click", resetForm);
     els.clearSelectionButton.addEventListener("click", () => {
       state.selectedId = null;
@@ -170,6 +179,183 @@
     window.localStorage.removeItem(DATA_NOTICE_DISMISSED_KEY);
     els.dataNotice.hidden = false;
     els.dataNotice.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function exportJsonBackup() {
+    const backup = createBackupPayload();
+    const content = JSON.stringify(backup, null, 2);
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `rocisnik-backup-${toDateKey(new Date())}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    showBackupMessage(`Izvezeno ${formatHearingCount(state.hearings.length)} u JSON datoteku.`);
+  }
+
+  async function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const validation = validateBackupPayload(parsed);
+
+      if (!validation.valid) {
+        showBackupMessage(validation.message, "error");
+        return;
+      }
+
+      const mode = getImportMode();
+      const action = mode === "replace" ? "zamijeniti postojeće podatke" : "dodati podatke u postojeći ročišnik";
+      const duplicateNote = mode === "append" ? " Zapisi s istim ID-em neće se duplicirati." : "";
+      const confirmed = window.confirm(`Uvoz će ${action}. Datoteka sadrži ${formatHearingCount(validation.hearings.length)}.${duplicateNote} Nastaviti?`);
+      if (!confirmed) {
+        showBackupMessage("Uvoz je otkazan.");
+        return;
+      }
+
+      const result = importHearings(validation.hearings, mode);
+      saveHearings();
+      resetForm();
+      focusImportedRange(result.visibleHearings);
+      render();
+      showBackupMessage(result.message);
+    } catch (error) {
+      showBackupMessage("Datoteka nije ispravan JSON backup Ročišnika.", "error");
+    }
+  }
+
+  function createBackupPayload() {
+    return {
+      formatVersion: BACKUP_FORMAT_VERSION,
+      exportedAt: new Date().toISOString(),
+      metadata: {
+        appName: "Ročišnik",
+        storageKey: STORAGE_KEY
+      },
+      hearings: state.hearings
+    };
+  }
+
+  function validateBackupPayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return { valid: false, message: "Datoteka nije ispravan JSON backup Ročišnika." };
+    }
+
+    if (payload.formatVersion !== BACKUP_FORMAT_VERSION) {
+      return { valid: false, message: "Backup ima nepodržanu verziju formata." };
+    }
+
+    if (!Array.isArray(payload.hearings)) {
+      return { valid: false, message: "Backup ne sadrži ispravnu listu ročišta." };
+    }
+
+    const hearings = [];
+    for (let index = 0; index < payload.hearings.length; index += 1) {
+      const normalized = normalizeImportedHearing(payload.hearings[index]);
+      if (!normalized) {
+        return { valid: false, message: `Ročište pod rednim brojem ${index + 1} nije ispravno.` };
+      }
+      hearings.push(normalized);
+    }
+
+    return { valid: true, hearings };
+  }
+
+  function normalizeImportedHearing(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+
+    const id = getRequiredImportString(item.id);
+    const plaintiff = getRequiredImportString(item.plaintiff);
+    const defendant = getRequiredImportString(item.defendant);
+    const caseNumber = getRequiredImportString(item.caseNumber);
+    const hearingDateTime = getRequiredImportString(item.hearingDateTime);
+    if (!id || !plaintiff || !defendant || !caseNumber || Number.isNaN(new Date(hearingDateTime).getTime())) return null;
+
+    return {
+      id,
+      plaintiff,
+      defendant,
+      caseNumber,
+      hearingDateTime,
+      disputeSubject: getOptionalImportString(item.disputeSubject),
+      disputeValue: getOptionalImportString(item.disputeValue),
+      specificity: getOptionalImportString(item.specificity),
+      createdAt: getOptionalImportString(item.createdAt),
+      updatedAt: getOptionalImportString(item.updatedAt)
+    };
+  }
+
+  function getRequiredImportString(value) {
+    return typeof value === "string" && value.trim() ? value.trim() : "";
+  }
+
+  function getOptionalImportString(value) {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  function getImportMode() {
+    return els.importModeInputs.find((input) => input.checked)?.value === "replace" ? "replace" : "append";
+  }
+
+  function importHearings(importedHearings, mode) {
+    if (mode === "replace") {
+      state.hearings = [...importedHearings];
+      state.selectedId = null;
+      state.editingId = null;
+      return {
+        visibleHearings: importedHearings,
+        message: `Uvoz je dovršen. Zamijenjeno je ${formatHearingCount(importedHearings.length)}.`
+      };
+    }
+
+    const existingIds = new Set(state.hearings.map((hearing) => hearing.id));
+    const added = [];
+    let skipped = 0;
+
+    importedHearings.forEach((hearing) => {
+      if (existingIds.has(hearing.id)) {
+        skipped += 1;
+        return;
+      }
+      existingIds.add(hearing.id);
+      state.hearings.push(hearing);
+      added.push(hearing);
+    });
+
+    return {
+      visibleHearings: added,
+      message: `Uvoz je dovršen. Dodano: ${formatHearingCount(added.length)}. Preskočeno duplikata: ${skipped}.`
+    };
+  }
+
+  function focusImportedRange(hearings) {
+    if (!hearings.length) {
+      setMobileView("schedule");
+      return;
+    }
+
+    const dates = hearings.map((hearing) => new Date(hearing.hearingDateTime)).sort((a, b) => a - b);
+    state.visibleStart = startOfMonth(dates[0]);
+    state.visibleEnd = endOfMonth(addMonths(dates[dates.length - 1], 3));
+    setMobileView("schedule");
+  }
+
+  function showBackupMessage(message, type = "success") {
+    els.backupMessage.textContent = message;
+    els.backupMessage.classList.toggle("error", type === "error");
+  }
+
+  function formatHearingCount(count) {
+    return count === 1 ? "1 ročište" : `${count} ročišta`;
   }
 
   function handleSubmit(event) {

@@ -25,9 +25,27 @@
       </header>
 
       <section class="data-notice" id="dataNotice" aria-labelledby="dataNoticeTitle">
-        <div>
+        <div class="data-notice-body">
           <h2 id="dataNoticeTitle">Sigurnost podataka</h2>
           <p>Podaci se čuvaju samo u ovom pregledniku i ne sinkroniziraju se između uređaja. Redovito napravite izvoz/sigurnosnu kopiju. Za stvarne i osjetljive podatke koristite samo zaštićen uređaj.</p>
+          <div class="backup-tools" aria-label="Izvoz i uvoz podataka">
+            <button class="secondary-button compact-button" type="button" id="exportJsonButton">Izvezi JSON</button>
+            <div class="import-controls">
+              <fieldset class="import-mode" aria-label="Način uvoza">
+                <label>
+                  <input type="radio" name="importMode" value="append" checked>
+                  <span>Dodaj u postojeće podatke</span>
+                </label>
+                <label>
+                  <input type="radio" name="importMode" value="replace">
+                  <span>Zamijeni postojeće podatke</span>
+                </label>
+              </fieldset>
+              <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
+              <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
+            </div>
+          </div>
+          <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
         </div>
         <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
       </section>
