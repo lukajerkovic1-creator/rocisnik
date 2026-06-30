@@ -121,6 +121,12 @@ input:focus-visible {
   padding: 18px;
 }
 
+.search-panel {
+  grid-column: 1 / -1;
+  width: min(760px, 100%);
+  justify-self: center;
+}
+
 .schedule-panel {
   padding: 16px;
 }
@@ -282,17 +288,26 @@ input.invalid {
 }
 
 .search-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  align-items: start;
 }
 
 .search-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 18px;
 }
 
 .search-actions .primary-button {
-  flex: 1;
+  width: 100%;
+  min-height: 48px;
+}
+
+.search-panel input {
+  min-height: 48px;
+  font-size: 16px;
 }
 
 .compact-button {
