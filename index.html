@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="hr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0f6b63">
+    <meta name="description" content="Ročišnik - lokalni raspored ročišta za ovaj i sljedeći tjedan.">
+    <title>Ročišnik</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Ročišnik</h1>
+          <p id="rangeLabel">Ovaj i sljedeći tjedan</p>
+        </div>
+        <button class="ghost-button" type="button" id="clearSelectionButton">Novi unos</button>
+      </header>
+
+      <nav class="mobile-tabs" aria-label="Mobilna navigacija">
+        <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
+        <button class="mobile-tab" type="button" data-mobile-view="form">Unos</button>
+        <button class="mobile-tab" type="button" data-mobile-view="details">Detalji</button>
+      </nav>
+
+      <main class="workspace">
+        <section class="entry-panel mobile-view" data-view="form" aria-labelledby="formTitle">
+          <div class="panel-heading">
+            <div>
+              <h2 id="formTitle">Dodaj ročište</h2>
+              <p>Unesi osnovne podatke o raspravi.</p>
+            </div>
+          </div>
+
+          <form id="hearingForm" novalidate>
+            <input type="hidden" id="hearingId">
+
+            <div class="form-grid">
+              <label>
+                <span>Tužitelj</span>
+                <input id="plaintiff" name="plaintiff" type="text" autocomplete="off" required>
+              </label>
+
+              <label>
+                <span>Tuženik</span>
+                <input id="defendant" name="defendant" type="text" autocomplete="off" required>
+              </label>
+
+              <label>
+                <span>Broj predmeta</span>
+                <input id="caseNumber" name="caseNumber" type="text" autocomplete="off" required>
+              </label>
+
+              <label>
+                <span>Datum i sat ročišta</span>
+                <input id="hearingDateTime" name="hearingDateTime" type="datetime-local" required>
+              </label>
+
+              <label class="full-row">
+                <span>Predmet spora</span>
+                <input id="disputeSubject" name="disputeSubject" type="text" autocomplete="off">
+              </label>
+
+              <label>
+                <span>Vrijednost predmeta spora</span>
+                <input id="disputeValue" name="disputeValue" type="text" inputmode="decimal" autocomplete="off">
+              </label>
+
+              <label>
+                <span>Specifičnost</span>
+                <input id="specificity" name="specificity" type="text" autocomplete="off">
+              </label>
+            </div>
+
+            <p class="form-message" id="formMessage" role="status" aria-live="polite"></p>
+
+            <div class="form-actions">
+              <button class="primary-button" type="submit" id="submitButton">Dodaj ročište</button>
+              <button class="secondary-button" type="button" id="cancelEditButton" hidden>Odustani</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="schedule-panel mobile-view active" data-view="schedule" aria-labelledby="scheduleTitle">
+          <div class="panel-heading schedule-heading">
+            <div>
+              <h2 id="scheduleTitle">Raspored ročišta</h2>
+              <p>Prikaz ovog i sljedećeg tjedna.</p>
+            </div>
+            <div class="today-chip" id="todayChip"></div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
+        </section>
+
+        <aside class="details-panel mobile-view" data-view="details" aria-labelledby="detailsTitle">
+          <div class="panel-heading">
+            <div>
+              <h2 id="detailsTitle">Detalji rasprave</h2>
+              <p id="detailsSubtitle">Odaberi ročište iz rasporeda.</p>
+            </div>
+          </div>
+
+          <div class="details-empty" id="detailsEmpty">
+            <div class="empty-mark" aria-hidden="true">R</div>
+            <p>Detalji će se prikazati ovdje nakon odabira ročišta.</p>
+          </div>
+
+          <div class="details-content" id="detailsContent" hidden>
+            <div class="case-title">
+              <span id="detailsTime"></span>
+              <h3 id="detailsParties"></h3>
+            </div>
+
+            <dl class="details-list">
+              <div>
+                <dt>Broj predmeta</dt>
+                <dd id="detailsCaseNumber"></dd>
+              </div>
+              <div>
+                <dt>Datum i sat ročišta</dt>
+                <dd id="detailsDateTime"></dd>
+              </div>
+              <div>
+                <dt>Predmet spora</dt>
+                <dd id="detailsDisputeSubject"></dd>
+              </div>
+              <div>
+                <dt>Vrijednost predmeta spora</dt>
+                <dd id="detailsDisputeValue"></dd>
+              </div>
+              <div>
+                <dt>Specifičnost</dt>
+                <dd id="detailsSpecificity"></dd>
+              </div>
+            </dl>
+
+            <div class="detail-actions">
+              <button class="secondary-button" type="button" id="editButton">Uredi</button>
+              <button class="danger-button" type="button" id="deleteButton">Obriši</button>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
