@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "rocisnik.hearings.v1";
   const DAY_NAMES = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
-  const MONTH_NAMES = [
+  const MONTH_NAMES_GENITIVE = [
     "siječnja",
     "veljače",
     "ožujka",
@@ -16,6 +16,20 @@
     "listopada",
     "studenoga",
     "prosinca"
+  ];
+  const MONTH_NAMES_NOMINATIVE = [
+    "siječanj",
+    "veljača",
+    "ožujak",
+    "travanj",
+    "svibanj",
+    "lipanj",
+    "srpanj",
+    "kolovoz",
+    "rujan",
+    "listopad",
+    "studeni",
+    "prosinac"
   ];
 
   const state = {
@@ -229,7 +243,7 @@
         const monthBreak = document.createElement("div");
         monthBreak.className = "month-break";
         monthBreak.id = `month-${day.getFullYear()}-${day.getMonth()}`;
-        monthBreak.textContent = `${capitalize(MONTH_NAMES[day.getMonth()])} ${day.getFullYear()}.`;
+        monthBreak.textContent = `${capitalize(MONTH_NAMES_NOMINATIVE[day.getMonth()])} ${day.getFullYear()}.`;
         els.calendarGrid.append(monthBreak);
         lastMonthKey = monthKey;
       }
@@ -247,7 +261,7 @@
 
       const month = document.createElement("div");
       month.className = "day-name";
-      month.textContent = MONTH_NAMES[day.getMonth()];
+      month.textContent = MONTH_NAMES_NOMINATIVE[day.getMonth()];
 
       head.append(dayText, month);
       dayCard.append(head);
@@ -470,7 +484,7 @@
 
   function fillMonthSelect() {
     els.monthSelect.replaceChildren();
-    MONTH_NAMES.forEach((name, index) => {
+    MONTH_NAMES_NOMINATIVE.forEach((name, index) => {
       const option = document.createElement("option");
       option.value = String(index);
       option.textContent = capitalize(name);
@@ -533,7 +547,7 @@
   }
 
   function formatShortDate(date) {
-    return `${date.getDate()}. ${MONTH_NAMES[date.getMonth()]}`;
+    return `${date.getDate()}. ${MONTH_NAMES_GENITIVE[date.getMonth()]}`;
   }
 
   function formatTime(date) {
@@ -541,7 +555,7 @@
   }
 
   function formatLongDateTime(date) {
-    return `${DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}. u ${formatTime(date)}`;
+    return `${DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES_GENITIVE[date.getMonth()]} ${date.getFullYear()}. u ${formatTime(date)}`;
   }
 
   function toDateKey(date) {
