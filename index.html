@@ -18,8 +18,19 @@
           <h1>Ročišnik</h1>
           <p id="rangeLabel">Ovaj i sljedeći tjedan</p>
         </div>
-        <button class="ghost-button" type="button" id="clearSelectionButton">Novi unos</button>
+        <div class="topbar-actions">
+          <button class="text-button" type="button" id="dataSafetyButton">Sigurnost podataka</button>
+          <button class="ghost-button" type="button" id="clearSelectionButton">Novi unos</button>
+        </div>
       </header>
+
+      <section class="data-notice" id="dataNotice" aria-labelledby="dataNoticeTitle">
+        <div>
+          <h2 id="dataNoticeTitle">Sigurnost podataka</h2>
+          <p>Podaci se čuvaju samo u ovom pregledniku i ne sinkroniziraju se između uređaja. Redovito napravite izvoz/sigurnosnu kopiju. Za stvarne i osjetljive podatke koristite samo zaštićen uređaj.</p>
+        </div>
+        <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
+      </section>
 
       <nav class="mobile-tabs" aria-label="Mobilna navigacija">
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>

@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "rocisnik.hearings.v1";
+  const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
   const DAY_NAMES = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
   const MONTH_NAMES_GENITIVE = [
     "siječnja",
@@ -53,6 +54,9 @@
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
+    dataNotice: document.getElementById("dataNotice"),
+    dataSafetyButton: document.getElementById("dataSafetyButton"),
+    dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
     monthSelect: document.getElementById("monthSelect"),
     yearInput: document.getElementById("yearInput"),
     jumpButton: document.getElementById("jumpButton"),
@@ -117,6 +121,8 @@
     els.todayChip.textContent = `Danas: ${formatShortDate(startOfToday)}`;
 
     els.form.addEventListener("submit", handleSubmit);
+    els.dataSafetyButton.addEventListener("click", showDataNotice);
+    els.dismissDataNoticeButton.addEventListener("click", dismissDataNotice);
     els.cancelEditButton.addEventListener("click", resetForm);
     els.clearSelectionButton.addEventListener("click", () => {
       state.selectedId = null;
@@ -147,7 +153,23 @@
     });
 
     setDefaultDateTime();
+    syncDataNotice();
     render();
+  }
+
+  function syncDataNotice() {
+    els.dataNotice.hidden = window.localStorage.getItem(DATA_NOTICE_DISMISSED_KEY) === "true";
+  }
+
+  function dismissDataNotice() {
+    window.localStorage.setItem(DATA_NOTICE_DISMISSED_KEY, "true");
+    els.dataNotice.hidden = true;
+  }
+
+  function showDataNotice() {
+    window.localStorage.removeItem(DATA_NOTICE_DISMISSED_KEY);
+    els.dataNotice.hidden = false;
+    els.dataNotice.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function handleSubmit(event) {
