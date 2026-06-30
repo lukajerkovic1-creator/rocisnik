@@ -22,13 +22,34 @@
     hearings: [],
     selectedId: null,
     editingId: null,
-    currentMobileView: "schedule"
+    currentMobileView: "schedule",
+    visibleEnd: null,
+    filters: {
+      plaintiff: "",
+      defendant: "",
+      subject: "",
+      value: "",
+      other: ""
+    }
   };
 
   const els = {
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
+    monthSelect: document.getElementById("monthSelect"),
+    yearInput: document.getElementById("yearInput"),
+    jumpButton: document.getElementById("jumpButton"),
+    todayButton: document.getElementById("todayButton"),
+    loadMoreButton: document.getElementById("loadMoreButton"),
+    filters: {
+      plaintiff: document.getElementById("filterPlaintiff"),
+      defendant: document.getElementById("filterDefendant"),
+      subject: document.getElementById("filterSubject"),
+      value: document.getElementById("filterValue"),
+      other: document.getElementById("filterOther")
+    },
+    clearFiltersButton: document.getElementById("clearFiltersButton"),
     form: document.getElementById("hearingForm"),
     formTitle: document.getElementById("formTitle"),
     formMessage: document.getElementById("formMessage"),
@@ -63,15 +84,17 @@
 
   const startOfToday = stripTime(new Date());
   const weekStart = getWeekStart(startOfToday);
-  const visibleDays = Array.from({ length: 14 }, (_, index) => addDays(weekStart, index));
-  const visibleStart = visibleDays[0];
-  const visibleEnd = visibleDays[visibleDays.length - 1];
+  const visibleStart = weekStart;
 
   init();
 
   function init() {
     state.hearings = loadHearings();
-    els.rangeLabel.textContent = `${formatShortDate(visibleStart)} - ${formatShortDate(visibleEnd)}`;
+    state.visibleEnd = getDefaultVisibleEnd();
+    fillMonthSelect();
+    els.monthSelect.value = String(startOfToday.getMonth());
+    els.yearInput.value = String(startOfToday.getFullYear());
+    updateRangeLabel();
     els.todayChip.textContent = `Danas: ${formatShortDate(startOfToday)}`;
 
     els.form.addEventListener("submit", handleSubmit);
@@ -84,6 +107,19 @@
     });
     els.editButton.addEventListener("click", startEditSelected);
     els.deleteButton.addEventListener("click", deleteSelected);
+    els.jumpButton.addEventListener("click", jumpToSelectedMonth);
+    els.todayButton.addEventListener("click", scrollToToday);
+    els.loadMoreButton.addEventListener("click", () => {
+      state.visibleEnd = endOfMonth(addMonths(state.visibleEnd, 6));
+      render();
+    });
+    Object.entries(els.filters).forEach(([key, input]) => {
+      input.addEventListener("input", () => {
+        state.filters[key] = normalizeSearch(input.value);
+        render();
+      });
+    });
+    els.clearFiltersButton.addEventListener("click", clearFilters);
     els.mobileTabs.forEach((tab) => {
       tab.addEventListener("click", () => setMobileView(tab.dataset.mobileView));
     });
@@ -171,6 +207,7 @@
   }
 
   function render() {
+    updateRangeLabel();
     renderCalendar();
     renderDetails();
     updateFormMode();
@@ -178,10 +215,23 @@
 
   function renderCalendar() {
     els.calendarGrid.replaceChildren();
+    const visibleDays = getVisibleDays();
+    let lastMonthKey = "";
 
     visibleDays.forEach((day) => {
+      const monthKey = `${day.getFullYear()}-${day.getMonth()}`;
+      if (monthKey !== lastMonthKey) {
+        const monthBreak = document.createElement("div");
+        monthBreak.className = "month-break";
+        monthBreak.id = `month-${day.getFullYear()}-${day.getMonth()}`;
+        monthBreak.textContent = `${capitalize(MONTH_NAMES[day.getMonth()])} ${day.getFullYear()}.`;
+        els.calendarGrid.append(monthBreak);
+        lastMonthKey = monthKey;
+      }
+
       const dayCard = document.createElement("article");
       dayCard.className = "day-card";
+      dayCard.id = `day-${toDateKey(day)}`;
       if (isSameDay(day, startOfToday)) dayCard.classList.add("today");
 
       const head = document.createElement("div");
@@ -204,7 +254,7 @@
       if (hearings.length === 0) {
         const empty = document.createElement("div");
         empty.className = "empty-day";
-        empty.textContent = "Nema ročišta";
+        empty.textContent = hasActiveFilters() ? "Nema rezultata" : "Nema ročišta";
         list.append(empty);
       } else {
         hearings.forEach((hearing) => list.append(createHearingButton(hearing)));
@@ -331,7 +381,87 @@
   function getHearingsForDay(day) {
     return state.hearings
       .filter((hearing) => isSameDay(new Date(hearing.hearingDateTime), day))
+      .filter(matchesFilters)
       .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
+  }
+
+  function matchesFilters(hearing) {
+    const filters = state.filters;
+    const checks = [
+      [filters.plaintiff, hearing.plaintiff],
+      [filters.defendant, hearing.defendant],
+      [filters.subject, hearing.disputeSubject],
+      [filters.value, hearing.disputeValue],
+      [filters.other, `${hearing.caseNumber} ${hearing.specificity}`]
+    ];
+    return checks.every(([query, value]) => !query || normalizeSearch(value).includes(query));
+  }
+
+  function hasActiveFilters() {
+    return Object.values(state.filters).some(Boolean);
+  }
+
+  function clearFilters() {
+    Object.keys(state.filters).forEach((key) => {
+      state.filters[key] = "";
+      els.filters[key].value = "";
+    });
+    render();
+  }
+
+  function jumpToSelectedMonth() {
+    const month = Number(els.monthSelect.value);
+    const year = Number(els.yearInput.value);
+    if (!Number.isInteger(month) || !Number.isInteger(year)) return;
+
+    const target = new Date(year, month, 1);
+    ensureVisibleThrough(endOfMonth(target));
+    render();
+    requestAnimationFrame(() => {
+      document.getElementById(`month-${year}-${month}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function scrollToToday() {
+    ensureVisibleThrough(startOfToday);
+    render();
+    requestAnimationFrame(() => {
+      document.getElementById(`day-${toDateKey(startOfToday)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  function ensureVisibleThrough(date) {
+    if (date > state.visibleEnd) {
+      state.visibleEnd = endOfMonth(addMonths(date, 3));
+    }
+  }
+
+  function getVisibleDays() {
+    const days = [];
+    let day = new Date(visibleStart);
+    while (day <= state.visibleEnd) {
+      days.push(new Date(day));
+      day = addDays(day, 1);
+    }
+    return days;
+  }
+
+  function getDefaultVisibleEnd() {
+    return endOfMonth(addMonths(startOfToday, 18));
+  }
+
+  function updateRangeLabel() {
+    els.rangeLabel.textContent = `${formatShortDate(visibleStart)} ${visibleStart.getFullYear()}. - ${formatShortDate(state.visibleEnd)} ${state.visibleEnd.getFullYear()}.`;
+  }
+
+  function fillMonthSelect() {
+    els.monthSelect.replaceChildren();
+    MONTH_NAMES.forEach((name, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = capitalize(name);
+      els.monthSelect.append(option);
+    });
   }
 
   function loadHearings() {
@@ -364,6 +494,18 @@
     return result;
   }
 
+  function addMonths(date, months) {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() + months);
+    return result;
+  }
+
+  function endOfMonth(date) {
+    const result = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    result.setHours(23, 59, 59, 999);
+    return result;
+  }
+
   function stripTime(date) {
     const result = new Date(date);
     result.setHours(0, 0, 0, 0);
@@ -386,6 +528,23 @@
 
   function formatLongDateTime(date) {
     return `${DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}. u ${formatTime(date)}`;
+  }
+
+  function toDateKey(date) {
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function normalizeSearch(value) {
+    return String(value || "")
+      .toLocaleLowerCase("hr-HR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+  }
+
+  function capitalize(value) {
+    return `${value.charAt(0).toLocaleUpperCase("hr-HR")}${value.slice(1)}`;
   }
 
   function toDateTimeInputValue(date) {
