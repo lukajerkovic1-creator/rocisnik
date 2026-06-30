@@ -106,6 +106,7 @@ input:focus-visible {
 
 .entry-panel,
 .schedule-panel,
+.search-panel,
 .details-panel {
   min-width: 0;
   background: var(--surface);
@@ -115,6 +116,7 @@ input:focus-visible {
 }
 
 .entry-panel,
+.search-panel,
 .details-panel {
   padding: 18px;
 }
@@ -260,7 +262,7 @@ input.invalid {
 
 .schedule-tools {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 14px;
   padding: 12px;
   border: 1px solid var(--border);
@@ -281,6 +283,16 @@ input.invalid {
 
 .search-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+}
+
+.search-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.search-actions .primary-button {
+  flex: 1;
 }
 
 .compact-button {
@@ -545,11 +557,13 @@ input.invalid {
 
   .entry-panel,
   .schedule-panel,
+  .search-panel,
   .details-panel {
     box-shadow: none;
   }
 
   .entry-panel,
+  .search-panel,
   .details-panel,
   .schedule-panel {
     padding: 14px;
@@ -593,10 +607,18 @@ input.invalid {
     width: 100%;
     min-height: 46px;
   }
+
+  .search-actions {
+    flex-direction: column;
+  }
 }
 
 @media (min-width: 761px) {
   .mobile-view {
+    display: block;
+  }
+
+  .utility-view {
     display: block;
   }
 }

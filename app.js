@@ -49,6 +49,7 @@
       value: document.getElementById("filterValue"),
       other: document.getElementById("filterOther")
     },
+    searchButton: document.getElementById("searchButton"),
     clearFiltersButton: document.getElementById("clearFiltersButton"),
     form: document.getElementById("hearingForm"),
     formTitle: document.getElementById("formTitle"),
@@ -114,10 +115,13 @@
       state.visibleEnd = endOfMonth(addMonths(state.visibleEnd, 6));
       render();
     });
-    Object.entries(els.filters).forEach(([key, input]) => {
-      input.addEventListener("input", () => {
-        state.filters[key] = normalizeSearch(input.value);
-        render();
+    els.searchButton.addEventListener("click", applySearch);
+    Object.values(els.filters).forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          applySearch();
+        }
       });
     });
     els.clearFiltersButton.addEventListener("click", clearFilters);
@@ -407,6 +411,15 @@
       state.filters[key] = "";
       els.filters[key].value = "";
     });
+    setMobileView("schedule");
+    render();
+  }
+
+  function applySearch() {
+    Object.entries(els.filters).forEach(([key, input]) => {
+      state.filters[key] = normalizeSearch(input.value);
+    });
+    setMobileView("schedule");
     render();
   }
 

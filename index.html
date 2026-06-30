@@ -23,12 +23,12 @@
 
       <nav class="mobile-tabs" aria-label="Mobilna navigacija">
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
-        <button class="mobile-tab" type="button" data-mobile-view="form">Unos</button>
+        <button class="mobile-tab" type="button" data-mobile-view="search">Pretraži</button>
         <button class="mobile-tab" type="button" data-mobile-view="details">Detalji</button>
       </nav>
 
       <main class="workspace">
-        <section class="entry-panel mobile-view" data-view="form" aria-labelledby="formTitle">
+        <section class="entry-panel mobile-view utility-view" data-view="form" aria-labelledby="formTitle">
           <div class="panel-heading">
             <div>
               <h2 id="formTitle">Dodaj ročište</h2>
@@ -89,7 +89,7 @@
           <div class="panel-heading schedule-heading">
             <div>
               <h2 id="scheduleTitle">Raspored ročišta</h2>
-              <p>Pregled po datumima, uz skok na mjesec i odvojenu pretragu.</p>
+              <p>Pregled po datumima, uz skok na mjesec i godinu.</p>
             </div>
             <div class="today-chip" id="todayChip"></div>
           </div>
@@ -109,40 +109,52 @@
               <button class="secondary-button" type="button" id="jumpButton">Prikaži</button>
               <button class="ghost-button compact-button" type="button" id="todayButton">Danas</button>
             </div>
-
-            <div class="search-grid">
-              <label>
-                <span>Tužitelj</span>
-                <input id="filterPlaintiff" type="search" autocomplete="off" placeholder="Pretraži tužitelja">
-              </label>
-
-              <label>
-                <span>Tuženik</span>
-                <input id="filterDefendant" type="search" autocomplete="off" placeholder="Pretraži tuženika">
-              </label>
-
-              <label>
-                <span>Predmet</span>
-                <input id="filterSubject" type="search" autocomplete="off" placeholder="Pretraži predmet">
-              </label>
-
-              <label>
-                <span>Vrijednost</span>
-                <input id="filterValue" type="search" autocomplete="off" placeholder="Pretraži vrijednost">
-              </label>
-
-              <label>
-                <span>Drugo</span>
-                <input id="filterOther" type="search" autocomplete="off" placeholder="Broj predmeta ili specifičnost">
-              </label>
-
-              <button class="ghost-button compact-button" type="button" id="clearFiltersButton">Očisti</button>
-            </div>
           </div>
 
           <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
           <div class="load-more-wrap">
             <button class="secondary-button" type="button" id="loadMoreButton">Učitaj još 6 mjeseci</button>
+          </div>
+        </section>
+
+        <section class="search-panel mobile-view" data-view="search" aria-labelledby="searchTitle">
+          <div class="panel-heading">
+            <div>
+              <h2 id="searchTitle">Pretraži rasprave</h2>
+              <p>Unesi jedan ili više kriterija pa pokreni pretragu.</p>
+            </div>
+          </div>
+
+          <div class="search-grid">
+            <label>
+              <span>Tužitelj</span>
+              <input id="filterPlaintiff" type="search" autocomplete="off" placeholder="Pretraži tužitelja">
+            </label>
+
+            <label>
+              <span>Tuženik</span>
+              <input id="filterDefendant" type="search" autocomplete="off" placeholder="Pretraži tuženika">
+            </label>
+
+            <label>
+              <span>Predmet</span>
+              <input id="filterSubject" type="search" autocomplete="off" placeholder="Pretraži predmet">
+            </label>
+
+            <label>
+              <span>Vrijednost</span>
+              <input id="filterValue" type="search" autocomplete="off" placeholder="Pretraži vrijednost">
+            </label>
+
+            <label>
+              <span>Drugo</span>
+              <input id="filterOther" type="search" autocomplete="off" placeholder="Broj predmeta ili specifičnost">
+            </label>
+          </div>
+
+          <div class="search-actions">
+            <button class="primary-button" type="button" id="searchButton">Pretraži</button>
+            <button class="ghost-button compact-button" type="button" id="clearFiltersButton">Očisti</button>
           </div>
         </section>
 
