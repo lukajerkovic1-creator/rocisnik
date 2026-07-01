@@ -122,8 +122,8 @@ select:focus-visible {
   justify-content: space-between;
   gap: 18px;
   max-width: 1440px;
-  margin: 0 auto 10px;
-  padding: 10px 14px;
+  margin: 0 auto 8px;
+  padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
@@ -148,8 +148,8 @@ select:focus-visible {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
   border-radius: 8px;
   color: #fff;
@@ -175,7 +175,7 @@ select:focus-visible {
 }
 
 .topbar h1 {
-  font-size: 22px;
+  font-size: 21px;
   line-height: 1.05;
   font-weight: 760;
 }
@@ -194,7 +194,7 @@ select:focus-visible {
 .topbar-primary {
   flex: 0 0 auto;
   min-width: 132px;
-  min-height: 42px;
+  min-height: 40px;
 }
 
 .topbar p,
@@ -615,7 +615,7 @@ select:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   max-width: 1440px;
-  margin: 0 auto 14px;
+  margin: 0 auto 12px;
 }
 
 .overview-card {
@@ -625,10 +625,10 @@ select:focus-visible {
     "icon label"
     "icon count"
     "icon meta";
-  gap: 1px 14px;
+  gap: 0 14px;
   align-items: center;
-  min-height: 82px;
-  padding: 14px 18px;
+  min-height: 66px;
+  padding: 8px 18px;
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: 12px;
@@ -646,16 +646,16 @@ select:focus-visible {
   grid-area: icon;
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
+  width: 46px;
+  height: 46px;
   border-radius: 999px;
   color: var(--accent-strong);
   background: var(--accent-soft);
 }
 
 .overview-icon svg {
-  width: 28px;
-  height: 28px;
+  width: 25px;
+  height: 25px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -732,7 +732,7 @@ select:focus-visible {
 .overview-card strong {
   grid-area: count;
   color: var(--accent-strong);
-  font-size: 30px;
+  font-size: 26px;
   line-height: 1;
   font-weight: 800;
 }
@@ -757,7 +757,7 @@ select:focus-visible {
     "schedule side"
     "search side"
     "entry side";
-  gap: 12px;
+  gap: 10px;
   max-width: 1440px;
   margin: 0 auto 14px;
   align-items: start;
@@ -777,7 +777,7 @@ select:focus-visible {
 .entry-panel,
 .search-panel,
 .details-panel {
-  padding: 18px;
+  padding: 16px;
 }
 
 .entry-panel {
@@ -794,7 +794,7 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 18px;
-  margin: -6px -6px 16px;
+  margin: -5px -5px 12px;
   padding: 0 6px;
   border-bottom: 1px solid var(--border);
 }
@@ -804,7 +804,7 @@ select:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 38px;
   padding: 0 12px;
   color: #52625f;
   background: transparent;
@@ -842,14 +842,14 @@ select:focus-visible {
 
 .schedule-panel {
   grid-area: schedule;
-  padding: 14px;
+  padding: 10px 12px;
 }
 
 .side-column {
   grid-area: side;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   position: sticky;
   top: 14px;
@@ -877,9 +877,9 @@ select:focus-visible {
 .schedule-view-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 14px 0 16px;
-  padding: 6px;
+  gap: 7px;
+  margin: 4px 0 8px;
+  padding: 4px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-soft);
@@ -887,8 +887,8 @@ select:focus-visible {
 
 .schedule-view-button {
   position: relative;
-  min-height: 44px;
-  padding: 9px 10px;
+  min-height: 34px;
+  padding: 6px 10px;
   color: var(--muted);
   background: transparent;
   font-size: 13px;
@@ -915,8 +915,8 @@ select:focus-visible {
 .schedule-searchbar {
   display: grid;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .schedule-datebar {
@@ -926,7 +926,7 @@ select:focus-visible {
 
 .schedule-date-label {
   width: 100%;
-  min-height: 36px;
+  min-height: 32px;
   display: grid;
   place-items: center;
   padding: 0 14px;
@@ -941,8 +941,8 @@ select:focus-visible {
 .icon-button {
   display: inline-grid;
   place-items: center;
-  width: 36px;
-  min-height: 36px;
+  width: 32px;
+  min-height: 32px;
   border: 1px solid var(--border);
   color: #465653;
   background: #fff;
@@ -969,7 +969,7 @@ select:focus-visible {
 .quick-search-label input,
 .sort-label select {
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
   border-radius: 7px;
 }
 
@@ -1507,12 +1507,12 @@ select.invalid {
 
 .hearing-button {
   display: grid;
-  grid-template-columns: 112px minmax(190px, 1.15fr) minmax(160px, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: 106px minmax(190px, 1.15fr) minmax(160px, 1fr) auto;
+  gap: 10px;
   align-items: center;
   width: 100%;
-  min-height: 58px;
-  padding: 8px 14px;
+  min-height: 48px;
+  padding: 5px 14px;
   border: 0;
   border-top: 1px solid var(--border);
   border-left: 4px solid var(--accent);
@@ -1530,35 +1530,35 @@ select.invalid {
 
 .hearing-timeblock {
   display: grid;
-  gap: 2px;
-  padding-right: 12px;
+  gap: 1px;
+  padding-right: 10px;
   border-right: 1px solid var(--border);
 }
 
 .hearing-time {
   color: var(--accent-strong);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.05;
   font-weight: 820;
 }
 
 .hearing-body {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .hearing-case {
   color: var(--text);
   overflow-wrap: anywhere;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
 }
 
 .hearing-parties {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 740;
 }
 
@@ -1567,7 +1567,7 @@ select.invalid {
   min-width: 0;
   color: var(--muted);
   overflow-wrap: anywhere;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 640;
 }
 
@@ -1591,8 +1591,8 @@ select.invalid {
   justify-content: center;
   gap: 0 10px;
   width: 100%;
-  min-height: 48px;
-  margin-top: 8px;
+  min-height: 36px;
+  margin-top: 5px;
   border: 1px dashed var(--border-strong);
   border-radius: 10px;
   color: var(--accent-strong);
@@ -1604,8 +1604,8 @@ select.invalid {
   grid-row: 1 / 3;
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   align-self: center;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
@@ -1616,13 +1616,13 @@ select.invalid {
 
 .quick-add-button strong {
   align-self: end;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .quick-add-button small {
   align-self: start;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .quick-add-button:hover,

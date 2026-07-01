@@ -124,6 +124,18 @@ async function run() {
     await assertVisibleText(page, ".utility-tabs", "Pretraživanje");
     await assertVisibleText(page, ".utility-tabs", "Novo ročište");
     await assertVisibleText(page, ".utility-tabs", "Podsjetnici");
+    const desktopLayout = await page.evaluate(() => {
+      const utilityTabs = document.querySelector(".utility-tabs")?.getBoundingClientRect();
+      const searchPanel = document.querySelector(".search-panel")?.getBoundingClientRect();
+      return {
+        noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+        utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
+        searchPanelStartsInFirstViewport: searchPanel ? searchPanel.top < window.innerHeight : false
+      };
+    });
+    assert.equal(desktopLayout.noHorizontalScroll, true);
+    assert.equal(desktopLayout.utilityTabsInFirstViewport, true);
+    assert.equal(desktopLayout.searchPanelStartsInFirstViewport, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
