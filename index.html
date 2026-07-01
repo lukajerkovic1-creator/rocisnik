@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=26">
+    <link rel="stylesheet" href="styles.css?v=30">
   </head>
   <body>
     <div class="app-shell">
@@ -27,10 +27,10 @@
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="text-button" type="button" id="dataSafetyButton">Sigurnosna kopija</button>
-          <button class="text-button" type="button" id="securityNoticeButton">Zaštita podataka</button>
-          <button class="text-button" type="button" id="onboardingButton">Pomoć</button>
           <button class="primary-button topbar-primary" type="button" id="clearSelectionButton">Novo ročište</button>
+          <button class="text-button" type="button" id="dataSafetyButton">Sigurnosna kopija</button>
+          <button class="text-button" type="button" id="onboardingButton">Pomoć</button>
+          <button class="text-button" type="button" id="settingsButton">Postavke</button>
         </div>
       </header>
 
@@ -86,21 +86,45 @@
 
       <section class="overview-strip" aria-label="Sažetak ročišta">
         <button class="overview-card" type="button" data-schedule-view="today">
+          <span class="overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 3v4M17 3v4M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+              <path d="m8 14 2 2 5-5" />
+            </svg>
+          </span>
           <span>Danas</span>
           <strong id="summaryTodayCount">0</strong>
           <small>ročišta</small>
         </button>
         <button class="overview-card" type="button" data-schedule-view="week">
+          <span class="overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 3v4M17 3v4M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+              <path d="M8 13h8M8 17h5" />
+            </svg>
+          </span>
           <span>Ovaj tjedan</span>
           <strong id="summaryWeekCount">0</strong>
           <small>ročišta</small>
         </button>
         <button class="overview-card" type="button" data-schedule-view="next30">
+          <span class="overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 3v4M17 3v4M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+              <path d="M8 13h8M8 17h8" />
+              <path d="M12 12v6" />
+            </svg>
+          </span>
           <span>Sljedećih 30 dana</span>
           <strong id="summaryNext30Count">0</strong>
           <small>ročišta</small>
         </button>
         <div class="overview-card overview-card-static">
+          <span class="overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3v18M6 7h12M7 7l-4 7h8L7 7Zm10 0-4 7h8l-4-7ZM9 21h6" />
+            </svg>
+          </span>
           <span>Ukupno aktivnih</span>
           <strong id="summaryActiveCount">0</strong>
           <small>zapisa</small>
@@ -224,6 +248,31 @@
             <button class="schedule-view-button" type="button" data-schedule-view="all">Sve</button>
           </div>
 
+          <div class="schedule-datebar" aria-label="Odabrani datum i brza navigacija">
+            <button class="icon-button" type="button" id="schedulePrevButton" aria-label="Prethodni mjesec">
+              <span aria-hidden="true">‹</span>
+            </button>
+            <div class="schedule-date-label" id="scheduleDateLabel">Danas</div>
+            <button class="icon-button" type="button" id="scheduleNextButton" aria-label="Sljedeći mjesec">
+              <span aria-hidden="true">›</span>
+            </button>
+            <button class="ghost-button compact-button" type="button" id="scheduleTodayButton">Danas</button>
+          </div>
+
+          <div class="schedule-searchbar" aria-label="Brza pretraga rasporeda">
+            <label class="quick-search-label">
+              <span class="visually-hidden">Brza pretraga</span>
+              <input id="scheduleQuickSearch" type="search" autocomplete="off" placeholder="Brza pretraga (broj predmeta, stranke, predmet...)">
+            </label>
+            <button class="secondary-button compact-button" type="button" id="scheduleFilterButton">Filtri</button>
+            <label class="sort-label">
+              <span class="visually-hidden">Sortiranje</span>
+              <select id="scheduleSortSelect">
+                <option value="date">Sortiraj: Datum i vrijeme</option>
+              </select>
+            </label>
+          </div>
+
           <div class="schedule-tools" aria-label="Pretraga i odabir razdoblja">
             <div class="jump-controls">
               <label>
@@ -324,12 +373,14 @@
           <div class="search-results" id="searchResults" aria-live="polite"></div>
         </section>
 
+        <div class="side-column">
         <aside class="details-panel mobile-view" data-view="details" aria-labelledby="detailsTitle">
           <div class="panel-heading">
             <div>
               <h2 id="detailsTitle">Detalji rasprave</h2>
               <p id="detailsSubtitle">Odaberi raspravu za prikaz detalja.</p>
             </div>
+            <div class="details-header-status" id="detailsHeaderStatus" hidden></div>
           </div>
 
           <div class="details-empty" id="detailsEmpty">
@@ -342,6 +393,12 @@
             <div class="case-title">
               <span id="detailsTime"></span>
               <h3 id="detailsParties"></h3>
+            </div>
+
+            <div class="detail-actions">
+              <button class="secondary-button" type="button" id="editButton">Uredi</button>
+              <button class="secondary-button" type="button" id="restoreButton" hidden>Vrati</button>
+              <button class="danger-button" type="button" id="deleteButton">Obriši</button>
             </div>
 
             <dl class="details-list">
@@ -383,11 +440,6 @@
               <div class="history-list" id="detailsHistory"></div>
             </details>
 
-            <div class="detail-actions">
-              <button class="secondary-button" type="button" id="editButton">Uredi</button>
-              <button class="secondary-button" type="button" id="restoreButton" hidden>Vrati</button>
-              <button class="danger-button" type="button" id="deleteButton">Obriši</button>
-            </div>
           </div>
         </aside>
 
@@ -430,7 +482,16 @@
           </div>
           <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
         </section>
+        </div>
       </main>
+
+      <footer class="app-footer" aria-label="Pomoćne poveznice">
+        <span>Ročišnik v2.0.0</span>
+        <button class="footer-link" type="button" id="footerHelpButton">Pomoć</button>
+        <button class="footer-link" type="button" id="securityNoticeButton">Sigurnosna napomena</button>
+        <button class="footer-link" type="button" id="footerOnboardingButton">Kako koristiti</button>
+        <span class="footer-storage-status">Lokalno spremište preglednika</span>
+      </footer>
     </div>
 
     <div class="modal-backdrop" id="encryptedBackupModal" role="dialog" aria-modal="true" aria-labelledby="encryptedBackupTitle" hidden>
@@ -513,6 +574,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=26"></script>
+    <script src="app.js?v=30"></script>
   </body>
 </html>

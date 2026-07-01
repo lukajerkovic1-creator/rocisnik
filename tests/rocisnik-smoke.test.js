@@ -309,6 +309,7 @@ async function run() {
     await assertSearchIncludes(page, "Datum Otkazano");
     await assertSearchExcludes(page, "Datum Sutra");
 
+    await page.click("#scheduleFilterButton");
     await page.check("#showDeletedToggle");
     await page.click("#clearFiltersButton");
     await page.fill("#filterDateFrom", toDateKey(tomorrow));
@@ -333,7 +334,9 @@ async function run() {
     await assertVisibleText(page, ".search-result-button", "Zakazano");
 
     await page.click(".search-result-button");
-    await assertVisibleText(page, "#detailsParties", "Croatia osiguranje - Marko Markovic");
+    await assertVisibleText(page, "#detailsParties", "P-123/2026");
+    await assertVisibleText(page, "#detailsSubtitle", "Croatia osiguranje - Marko Markovic");
+    await assertVisibleText(page, "#detailsHeaderStatus", "Zakazano");
     await assertVisibleText(page, "#detailsStatus", "Zakazano");
     await openHistoryPanel(page);
     await assertVisibleText(page, "#detailsHistory", "Zapis stvoren");

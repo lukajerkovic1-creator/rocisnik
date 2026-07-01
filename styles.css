@@ -69,7 +69,18 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 16px;
+  padding: 16px 18px 10px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .topbar {
@@ -109,12 +120,12 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 18px;
   max-width: 1440px;
-  margin: 0 auto 12px;
-  padding: 14px 16px;
+  margin: 0 auto 10px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
   box-shadow: var(--shadow);
 }
@@ -123,8 +134,8 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 16px;
 }
 
 .brand-block {
@@ -137,8 +148,8 @@ select:focus-visible {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
   border-radius: 8px;
   color: #fff;
@@ -164,7 +175,7 @@ select:focus-visible {
 }
 
 .topbar h1 {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.05;
   font-weight: 760;
 }
@@ -172,15 +183,18 @@ select:focus-visible {
 .app-subtitle {
   margin-top: 2px !important;
   color: #263633 !important;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 720;
 }
 
+.topbar #rangeLabel {
+  display: none;
+}
+
 .topbar-primary {
-  order: -1;
   flex: 0 0 auto;
-  min-width: 142px;
-  min-height: 46px;
+  min-width: 132px;
+  min-height: 42px;
 }
 
 .topbar p,
@@ -516,6 +530,28 @@ select:focus-visible {
   content: "?";
 }
 
+#dataSafetyButton::before {
+  content: "↥";
+}
+
+#settingsButton::before {
+  content: "⚙";
+}
+
+.topbar-actions .text-button {
+  gap: 8px;
+  min-height: 36px;
+  padding: 0;
+  color: #354642;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.topbar-actions .text-button::before {
+  color: #52625f;
+  background: #f2f6f5;
+}
+
 .topbar-primary::before {
   content: "+";
   font-size: 18px;
@@ -549,8 +585,8 @@ select:focus-visible {
     "icon meta count";
   gap: 2px 14px;
   align-items: center;
-  min-height: 86px;
-  padding: 14px 16px;
+  min-height: 82px;
+  padding: 14px 18px;
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: 12px;
@@ -558,6 +594,46 @@ select:focus-visible {
   background: var(--surface);
   box-shadow: 0 10px 28px rgba(24, 48, 44, 0.07);
   text-align: left;
+}
+
+.overview-card::before {
+  display: none;
+}
+
+.overview-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.overview-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.overview-card[data-schedule-view="week"] .overview-icon {
+  color: #176aa7;
+  background: #e7f2fb;
+}
+
+.overview-card[data-schedule-view="next30"] .overview-icon {
+  color: #248a38;
+  background: #e9f6eb;
+}
+
+.overview-card-static .overview-icon {
+  color: #8a6ad9;
+  background: #f0ebff;
 }
 
 .overview-card::before {
@@ -592,6 +668,11 @@ select:focus-visible {
   background: #eef2f1;
 }
 
+.overview-card::before {
+  display: none;
+  content: none;
+}
+
 .overview-card:not(.overview-card-static):hover,
 .overview-card:not(.overview-card-static):focus-visible,
 .overview-card.active {
@@ -599,7 +680,7 @@ select:focus-visible {
   background: #f2fbf8;
 }
 
-.overview-card span {
+.overview-card > span:not(.overview-icon) {
   grid-area: label;
   color: #33413f;
   font-size: 13px;
@@ -629,11 +710,11 @@ select:focus-visible {
 .workspace {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(330px, 400px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
   grid-template-areas:
-    "schedule details"
-    "search data"
-    "entry data";
+    "schedule side"
+    "search side"
+    "entry side";
   gap: 12px;
   max-width: 1440px;
   margin: 0 auto 14px;
@@ -672,14 +753,30 @@ select:focus-visible {
   padding: 16px;
 }
 
-.details-panel {
-  grid-area: details;
+.side-column {
+  grid-area: side;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
   position: sticky;
   top: 14px;
 }
 
+.details-panel {
+  position: static;
+}
+
+.side-column .details-panel {
+  max-height: 374px;
+  overflow: auto;
+}
+
+.details-header-status {
+  flex: 0 0 auto;
+}
+
 .workspace .data-notice {
-  grid-area: data;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -720,6 +817,68 @@ select:focus-visible {
   height: 7px;
   border-radius: 999px;
   background: var(--accent);
+}
+
+.schedule-datebar,
+.schedule-searchbar {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.schedule-datebar {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  justify-items: center;
+}
+
+.schedule-date-label {
+  width: 100%;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: #263633;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  color: #465653;
+  background: #fff;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.schedule-searchbar {
+  grid-template-columns: minmax(0, 1fr) auto minmax(180px, 220px);
+}
+
+.quick-search-label,
+.sort-label {
+  min-width: 0;
+}
+
+.quick-search-label input,
+.sort-label select {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 7px;
 }
 
 .panel-heading {
@@ -929,12 +1088,18 @@ select.invalid {
 
 .schedule-tools {
   display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-soft);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.schedule-tools:not(.open) {
+  display: none;
 }
 
 .deleted-toggle {
@@ -964,7 +1129,8 @@ select.invalid {
 }
 
 .jump-controls {
-  grid-template-columns: minmax(150px, 1.2fr) minmax(100px, 0.8fr) auto auto;
+  grid-template-columns: minmax(150px, 1.15fr) minmax(100px, 0.75fr) auto auto;
+  gap: 8px;
 }
 
 .search-grid {
@@ -1418,7 +1584,7 @@ select.invalid {
 .details-empty {
   display: grid;
   place-items: center;
-  min-height: 280px;
+  min-height: 270px;
   text-align: center;
 }
 
@@ -1467,7 +1633,7 @@ select.invalid {
 .details-list div {
   display: grid;
   gap: 3px;
-  padding-bottom: 11px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1598,6 +1764,51 @@ select.invalid {
   padding-left: 4px;
 }
 
+.app-footer {
+  order: 9;
+  width: 100%;
+  max-width: 1440px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: auto auto 0;
+  padding: 10px 2px 0;
+  color: #60716d;
+  font-size: 12px;
+}
+
+.footer-link {
+  min-height: auto;
+  padding: 0;
+  border-radius: 0;
+  color: #4f625e;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.footer-storage-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.footer-storage-status::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #20a35b;
+  box-shadow: 0 0 0 3px rgba(32, 163, 91, 0.1);
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
@@ -1657,14 +1868,14 @@ select.invalid {
 
 @media (max-width: 1180px) {
   .workspace {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
     grid-template-areas:
-      "schedule details"
-      "search data"
-      "entry data";
+      "schedule side"
+      "search side"
+      "entry side";
   }
 
-  .details-panel {
+  .side-column {
     position: static;
   }
 
@@ -1849,6 +2060,16 @@ select.invalid {
     display: block;
   }
 
+  .side-column {
+    display: block;
+    position: static;
+  }
+
+  .side-column .details-panel {
+    max-height: none;
+    overflow: visible;
+  }
+
   .mobile-view {
     display: none;
   }
@@ -1879,6 +2100,20 @@ select.invalid {
   .schedule-view-button {
     min-height: 46px;
     font-size: 14px;
+  }
+
+  .schedule-datebar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .schedule-datebar #scheduleTodayButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .schedule-searchbar,
+  .schedule-tools {
+    grid-template-columns: 1fr;
   }
 
   .calendar-grid {
@@ -1950,6 +2185,17 @@ select.invalid {
   .search-result-button {
     min-height: 82px;
   }
+
+  .app-footer {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding-top: 12px;
+  }
+
+  .footer-storage-status {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
 }
 
 @media (min-width: 761px) {
@@ -1959,6 +2205,19 @@ select.invalid {
 
   .utility-view {
     display: block;
+  }
+
+  .schedule-panel > .panel-heading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .schedule-view-tabs {
+    margin-top: 0;
   }
 }
 

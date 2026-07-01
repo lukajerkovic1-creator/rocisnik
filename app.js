@@ -114,6 +114,7 @@
     editingId: null,
     currentMobileView: "schedule",
     scheduleView: "next30",
+    scheduleToolsOpen: false,
     encryptedBackupAction: "",
     pendingEncryptedImportFile: null,
     pendingJsonExport: null,
@@ -146,6 +147,9 @@
     summaryActiveCount: document.getElementById("summaryActiveCount"),
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
+    settingsButton: document.getElementById("settingsButton"),
+    footerHelpButton: document.getElementById("footerHelpButton"),
+    footerOnboardingButton: document.getElementById("footerOnboardingButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
     securityNoticeButton: document.getElementById("securityNoticeButton"),
     onboardingButton: document.getElementById("onboardingButton"),
@@ -200,10 +204,19 @@
     yearInput: document.getElementById("yearInput"),
     jumpButton: document.getElementById("jumpButton"),
     todayButton: document.getElementById("todayButton"),
+    schedulePrevButton: document.getElementById("schedulePrevButton"),
+    scheduleNextButton: document.getElementById("scheduleNextButton"),
+    scheduleTodayButton: document.getElementById("scheduleTodayButton"),
+    scheduleDateLabel: document.getElementById("scheduleDateLabel"),
+    scheduleQuickSearch: document.getElementById("scheduleQuickSearch"),
+    scheduleFilterButton: document.getElementById("scheduleFilterButton"),
+    scheduleSortSelect: document.getElementById("scheduleSortSelect"),
+    scheduleTools: document.querySelector(".schedule-tools"),
     quickAddButton: document.getElementById("quickAddButton"),
     loadMoreButton: document.getElementById("loadMoreButton"),
     loadMoreWrap: document.querySelector(".load-more-wrap"),
     scheduleViewButtons: Array.from(document.querySelectorAll("[data-schedule-view]")),
+    scheduleTabButtons: Array.from(document.querySelectorAll(".schedule-view-button[data-schedule-view]")),
     showDeletedToggle: document.getElementById("showDeletedToggle"),
     filters: {
       plaintiff: document.getElementById("filterPlaintiff"),
@@ -249,6 +262,7 @@
     detailsEmpty: document.getElementById("detailsEmpty"),
     detailsContent: document.getElementById("detailsContent"),
     deletedStatus: document.getElementById("deletedStatus"),
+    detailsHeaderStatus: document.getElementById("detailsHeaderStatus"),
     detailsSubtitle: document.getElementById("detailsSubtitle"),
     detailsTime: document.getElementById("detailsTime"),
     detailsParties: document.getElementById("detailsParties"),
@@ -289,9 +303,12 @@
 
     els.form.addEventListener("submit", handleSubmit);
     els.dataSafetyButton.addEventListener("click", showDataNotice);
+    els.settingsButton.addEventListener("click", showDataNotice);
     els.dismissDataNoticeButton.addEventListener("click", dismissDataNotice);
     els.securityNoticeButton.addEventListener("click", openSecurityNoticeModal);
     els.onboardingButton.addEventListener("click", openOnboardingModal);
+    els.footerHelpButton.addEventListener("click", openOnboardingModal);
+    els.footerOnboardingButton.addEventListener("click", openOnboardingModal);
     els.securityPromptMoreButton.addEventListener("click", openSecurityNoticeModal);
     els.securityPromptAcceptButton.addEventListener("click", acceptSecurityNotice);
     els.securityNoticeAcceptButton.addEventListener("click", acceptSecurityNotice);
@@ -358,6 +375,17 @@
     });
     els.jumpButton.addEventListener("click", jumpToSelectedMonth);
     els.todayButton.addEventListener("click", scrollToToday);
+    els.scheduleTodayButton.addEventListener("click", scrollToToday);
+    els.schedulePrevButton.addEventListener("click", () => shiftScheduleMonth(-1));
+    els.scheduleNextButton.addEventListener("click", () => shiftScheduleMonth(1));
+    els.scheduleFilterButton.addEventListener("click", toggleScheduleTools);
+    els.scheduleQuickSearch.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applyQuickScheduleSearch();
+      }
+    });
+    els.scheduleSortSelect.addEventListener("change", render);
     els.scheduleViewButtons.forEach((button) => {
       button.addEventListener("click", () => setScheduleView(button.dataset.scheduleView));
     });
@@ -1718,6 +1746,8 @@
   function render() {
     updateRangeLabel();
     els.showDeletedToggle.checked = state.showDeleted;
+    els.scheduleTools.classList.toggle("open", state.scheduleToolsOpen);
+    els.scheduleFilterButton.setAttribute("aria-expanded", state.scheduleToolsOpen ? "true" : "false");
     updateScheduleViewButtons();
     renderOverviewSummary();
     renderSecurityPrompt();
@@ -2008,6 +2038,8 @@
       els.detailsEmpty.hidden = false;
       els.detailsContent.hidden = true;
       els.deletedStatus.hidden = true;
+      els.detailsHeaderStatus.hidden = true;
+      els.detailsHeaderStatus.replaceChildren();
       els.detailsSubtitle.textContent = "Odaberi raspravu za prikaz detalja.";
       return;
     }
@@ -2015,9 +2047,11 @@
     const date = new Date(hearing.hearingDateTime);
     els.detailsEmpty.hidden = true;
     els.detailsContent.hidden = false;
-    els.detailsSubtitle.textContent = hearing.caseNumber;
+    els.detailsHeaderStatus.hidden = false;
+    els.detailsHeaderStatus.replaceChildren(createStatusBadge(hearing.status));
+    els.detailsSubtitle.textContent = `${hearing.plaintiff} - ${hearing.defendant}`;
     els.detailsTime.textContent = formatTime(date);
-    els.detailsParties.textContent = `${hearing.plaintiff} - ${hearing.defendant}`;
+    els.detailsParties.textContent = hearing.caseNumber || "Bez broja predmeta";
     els.detailsCaseNumber.textContent = hearing.caseNumber;
     els.detailsDateTime.textContent = formatLongDateTime(date);
     els.detailsStatus.replaceChildren(createStatusBadge(hearing.status));
@@ -2294,12 +2328,27 @@
   }
 
   function updateScheduleViewButtons() {
-    const todayCount = getVisibleHearings().filter((hearing) => isToday(new Date(hearing.hearingDateTime))).length;
+    const visibleHearings = getVisibleHearings();
+    const validHearings = visibleHearings.filter((hearing) => {
+      const date = new Date(hearing.hearingDateTime);
+      return !Number.isNaN(date.getTime());
+    });
+    const counts = {
+      today: validHearings.filter((hearing) => isToday(new Date(hearing.hearingDateTime))).length,
+      week: validHearings.filter((hearing) => isThisWeek(new Date(hearing.hearingDateTime))).length,
+      next30: validHearings.filter((hearing) => isWithinNextDays(new Date(hearing.hearingDateTime), 30)).length,
+      all: visibleHearings.length
+    };
     els.scheduleViewButtons.forEach((button) => {
       const isActive = button.dataset.scheduleView === state.scheduleView;
       button.classList.toggle("active", isActive);
-      button.classList.toggle("has-items", button.dataset.scheduleView === "today" && todayCount > 0);
+      button.classList.toggle("has-items", button.dataset.scheduleView === "today" && counts.today > 0);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+    els.scheduleTabButtons.forEach((button) => {
+      const label = SCHEDULE_VIEWS[button.dataset.scheduleView]?.label || button.textContent;
+      const count = counts[button.dataset.scheduleView];
+      button.textContent = Number.isInteger(count) ? `${label} (${count})` : label;
     });
     els.loadMoreWrap.hidden = state.scheduleView !== "custom";
   }
@@ -2516,6 +2565,40 @@
     });
   }
 
+  function shiftScheduleMonth(delta) {
+    const month = Number(els.monthSelect.value);
+    const year = Number(els.yearInput.value);
+    const base = Number.isInteger(month) && Number.isInteger(year)
+      ? new Date(year, month, 1)
+      : startOfToday;
+    const target = addMonths(base, delta);
+    state.scheduleView = "custom";
+    state.visibleStart = startOfMonth(target);
+    state.visibleEnd = endOfMonth(addMonths(target, 18));
+    els.monthSelect.value = String(target.getMonth());
+    els.yearInput.value = String(target.getFullYear());
+    render();
+    requestAnimationFrame(() => {
+      document.getElementById(`month-${target.getFullYear()}-${target.getMonth()}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function applyQuickScheduleSearch() {
+    const query = els.scheduleQuickSearch.value.trim();
+    setMobileView("search");
+    if (!query) {
+      els.filters.other.focus();
+      return;
+    }
+    els.filters.other.value = query;
+    applySearch();
+  }
+
+  function toggleScheduleTools() {
+    state.scheduleToolsOpen = !state.scheduleToolsOpen;
+    render();
+  }
+
   function setScheduleView(view) {
     if (!SCHEDULE_VIEWS[view]) return;
     state.scheduleView = view;
@@ -2550,24 +2633,39 @@
 
   function updateRangeLabel() {
     if (state.scheduleView === "today") {
-      els.rangeLabel.textContent = `Danas: ${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}.`;
+      setRangeText(`Danas: ${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}.`, `Danas, ${formatLongDate(startOfToday)}`);
       return;
     }
     if (state.scheduleView === "week") {
       const weekEnd = addDays(weekStart, 6);
-      els.rangeLabel.textContent = `Ovaj tjedan: ${formatShortDate(weekStart)} ${weekStart.getFullYear()}. - ${formatShortDate(weekEnd)} ${weekEnd.getFullYear()}.`;
+      setRangeText(
+        `Ovaj tjedan: ${formatShortDate(weekStart)} ${weekStart.getFullYear()}. - ${formatShortDate(weekEnd)} ${weekEnd.getFullYear()}.`,
+        `${formatShortDate(weekStart)} ${weekStart.getFullYear()}. - ${formatShortDate(weekEnd)} ${weekEnd.getFullYear()}.`
+      );
       return;
     }
     if (state.scheduleView === "next30") {
       const end = addDays(startOfToday, 30);
-      els.rangeLabel.textContent = `Sljedećih 30 dana: ${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}. - ${formatShortDate(end)} ${end.getFullYear()}.`;
+      setRangeText(
+        `Sljedećih 30 dana: ${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}. - ${formatShortDate(end)} ${end.getFullYear()}.`,
+        `${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}. - ${formatShortDate(end)} ${end.getFullYear()}.`
+      );
       return;
     }
     if (state.scheduleView === "all") {
-      els.rangeLabel.textContent = state.showDeleted ? "Sva ročišta, uključujući obrisane" : "Sva aktivna ročišta";
+      const text = state.showDeleted ? "Sva ročišta, uključujući obrisane" : "Sva aktivna ročišta";
+      setRangeText(text, text);
       return;
     }
-    els.rangeLabel.textContent = `${formatShortDate(state.visibleStart)} ${state.visibleStart.getFullYear()}. - ${formatShortDate(state.visibleEnd)} ${state.visibleEnd.getFullYear()}.`;
+    setRangeText(
+      `${formatShortDate(state.visibleStart)} ${state.visibleStart.getFullYear()}. - ${formatShortDate(state.visibleEnd)} ${state.visibleEnd.getFullYear()}.`,
+      `${capitalize(MONTH_NAMES_NOMINATIVE[state.visibleStart.getMonth()])} ${state.visibleStart.getFullYear()}.`
+    );
+  }
+
+  function setRangeText(headerText, scheduleText) {
+    els.rangeLabel.textContent = headerText;
+    els.scheduleDateLabel.textContent = scheduleText;
   }
 
   function fillMonthSelect() {
@@ -2730,6 +2828,10 @@
 
   function formatLongDateTime(date) {
     return `${DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES_GENITIVE[date.getMonth()]} ${date.getFullYear()}. u ${formatTime(date)}`;
+  }
+
+  function formatLongDate(date) {
+    return `${DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES_GENITIVE[date.getMonth()]} ${date.getFullYear()}.`;
   }
 
   function formatLocalDateTime(date) {
