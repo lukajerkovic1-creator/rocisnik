@@ -131,15 +131,24 @@ async function run() {
     const desktopLayout = await page.evaluate(() => {
       const utilityTabs = document.querySelector(".utility-tabs")?.getBoundingClientRect();
       const searchPanel = document.querySelector(".search-panel")?.getBoundingClientRect();
+      const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
+      const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
+      const next30Tab = document.querySelector('.schedule-view-tabs [data-schedule-view="next30"]')?.getBoundingClientRect();
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
-        searchPanelStartsInFirstViewport: searchPanel ? searchPanel.top < window.innerHeight : false
+        searchPanelStartsInFirstViewport: searchPanel ? searchPanel.top < window.innerHeight : false,
+        scheduleTabsShareRowWithDatebar: scheduleTabs && scheduleDatebar
+          ? Math.abs(scheduleTabs.top - scheduleDatebar.top) <= 2
+          : false,
+        next30TabSingleLine: next30Tab ? next30Tab.height <= 40 : false
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
     assert.equal(desktopLayout.utilityTabsInFirstViewport, true);
     assert.equal(desktopLayout.searchPanelStartsInFirstViewport, true);
+    assert.equal(desktopLayout.scheduleTabsShareRowWithDatebar, true);
+    assert.equal(desktopLayout.next30TabSingleLine, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
