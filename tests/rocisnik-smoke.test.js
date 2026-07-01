@@ -459,6 +459,7 @@ async function run() {
     const storageAfterEncryptedExport = await page.evaluate(() => Object.values(localStorage).join(" "));
     assert.equal(storageAfterEncryptedExport.includes("SigurnaLozinka123!"), false);
 
+    await page.click(".import-options summary");
     const recordsBeforeWrongPassword = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
     await page.check('input[name="importMode"][value="replace"]');
     await page.setInputFiles("#importEncryptedFile", encryptedBackupPath);

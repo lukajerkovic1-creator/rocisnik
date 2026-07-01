@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=32">
+    <link rel="stylesheet" href="styles.css?v=33">
   </head>
   <body>
     <div class="app-shell">
@@ -487,16 +487,19 @@
               <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
               <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
               <div class="import-controls">
-                <fieldset class="import-mode" aria-label="Način uvoza">
-                  <label>
-                    <input type="radio" name="importMode" value="append" checked>
-                    <span>Dodaj u postojeće podatke</span>
-                  </label>
-                  <label>
-                    <input type="radio" name="importMode" value="replace">
-                    <span>Zamijeni postojeće podatke</span>
-                  </label>
-                </fieldset>
+                <details class="import-options">
+                  <summary>Način uvoza</summary>
+                  <fieldset class="import-mode" aria-label="Način uvoza">
+                    <label>
+                      <input type="radio" name="importMode" value="append" checked>
+                      <span>Dodaj u postojeće podatke</span>
+                    </label>
+                    <label>
+                      <input type="radio" name="importMode" value="replace">
+                      <span>Zamijeni postojeće podatke</span>
+                    </label>
+                  </fieldset>
+                </details>
                 <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
                 <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
                 <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
@@ -599,6 +602,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=32"></script>
+    <script src="app.js?v=33"></script>
   </body>
 </html>

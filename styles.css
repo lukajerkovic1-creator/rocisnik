@@ -415,6 +415,27 @@ select:focus-visible {
   accent-color: var(--accent);
 }
 
+.import-options {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.import-options summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: #435551;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.import-options .import-mode {
+  padding: 0 10px 8px;
+}
+
 .backup-message {
   min-height: 19px;
   margin-top: 9px !important;
@@ -599,11 +620,12 @@ select:focus-visible {
 
 .overview-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
-    "icon label count"
-    "icon meta count";
-  gap: 2px 14px;
+    "icon label"
+    "icon count"
+    "icon meta";
+  gap: 1px 14px;
   align-items: center;
   min-height: 82px;
   padding: 14px 18px;
@@ -710,7 +732,7 @@ select:focus-visible {
 .overview-card strong {
   grid-area: count;
   color: var(--accent-strong);
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1;
   font-weight: 800;
 }
@@ -2238,6 +2260,37 @@ select.invalid {
 
   .schedule-view-tabs {
     margin-top: 0;
+  }
+
+  .calendar-grid {
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .month-break,
+  .day-head {
+    display: none;
+  }
+
+  .day-card {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .day-card.today {
+    box-shadow: none;
+  }
+
+  .day-card + .day-card .hearing-button {
+    border-top: 1px solid var(--border);
+  }
+
+  .hearing-button:first-child {
+    border-top: 0;
   }
 }
 
