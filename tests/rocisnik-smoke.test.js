@@ -142,6 +142,12 @@ async function run() {
       const topbarActionIconStyle = getComputedStyle(document.querySelector(".topbar-action-icon"));
       const topbarActionSvg = document.querySelector(".topbar-action-icon svg")?.getBoundingClientRect();
       const detailActionButtons = ["#editButton", "#deleteButton", "#moreDetailsButton"];
+      const detailActionButtonsAreBordered = detailActionButtons.every((selector) => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return style.backgroundColor === "rgb(255, 255, 255)"
+          && Number.parseFloat(style.borderTopWidth) >= 1
+          && style.borderTopStyle === "solid";
+      });
       const statusBadgeProbe = document.createElement("span");
       statusBadgeProbe.className = "status-badge";
       statusBadgeProbe.hidden = true;
@@ -184,6 +190,7 @@ async function run() {
           const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
           return iconStyle.content === '""' && iconStyle.maskImage !== "none";
         }),
+        detailActionButtonsAreBordered,
         statusBadgesAreUppercase: statusBadgeTextTransform === "uppercase"
           && statusBadgeFontSize <= 11,
         filterButtonHasIcon: filterIconStyle.content === '""'
@@ -210,6 +217,7 @@ async function run() {
     assert.equal(desktopLayout.topNewButtonHasIcon, true);
     assert.equal(desktopLayout.topbarActionIconsAreLightweight, true);
     assert.equal(desktopLayout.detailActionButtonsHaveIcons, true);
+    assert.equal(desktopLayout.detailActionButtonsAreBordered, true);
     assert.equal(desktopLayout.statusBadgesAreUppercase, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
@@ -269,7 +277,10 @@ async function run() {
     await assertVisibleText(page, "#summaryActiveCount", "1");
     await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
     assert.equal(await page.locator(".hearing-button .row-more").count(), 1);
-    assert.equal(await page.locator(".hearing-button").first().evaluate((element) => element.getBoundingClientRect().height <= 46), true);
+    assert.equal(await page.locator(".hearing-button").first().evaluate((element) => {
+      const height = element.getBoundingClientRect().height;
+      return height >= 50 && height <= 64;
+    }), true);
     await page.click("#quickAddButton");
     assert.equal(await page.locator("#plaintiff").evaluate((input) => document.activeElement === input), true);
 
