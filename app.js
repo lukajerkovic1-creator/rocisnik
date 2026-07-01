@@ -4,6 +4,7 @@
   const STORAGE_KEY = "rocisnik.hearings.v1";
   const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
   const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
+  const ONBOARDING_COMPLETED_AT_KEY = "onboardingCompletedAt";
   const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
   const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
   const DEFAULT_REMINDER_KEY = "rocisnik.defaultReminder.v1";
@@ -140,6 +141,7 @@
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
     securityNoticeButton: document.getElementById("securityNoticeButton"),
+    onboardingButton: document.getElementById("onboardingButton"),
     securityPrompt: document.getElementById("securityPrompt"),
     securityPromptAcceptButton: document.getElementById("securityPromptAcceptButton"),
     securityPromptMoreButton: document.getElementById("securityPromptMoreButton"),
@@ -174,6 +176,10 @@
     encryptedPasswordConfirm: document.getElementById("encryptedPasswordConfirm"),
     encryptedPasswordConfirmWrap: document.getElementById("encryptedPasswordConfirmWrap"),
     showEncryptedPassword: document.getElementById("showEncryptedPassword"),
+    onboardingModal: document.getElementById("onboardingModal"),
+    onboardingCloseButton: document.getElementById("onboardingCloseButton"),
+    onboardingFinishButton: document.getElementById("onboardingFinishButton"),
+    onboardingSkipButton: document.getElementById("onboardingSkipButton"),
     monthSelect: document.getElementById("monthSelect"),
     yearInput: document.getElementById("yearInput"),
     jumpButton: document.getElementById("jumpButton"),
@@ -268,6 +274,7 @@
     els.dataSafetyButton.addEventListener("click", showDataNotice);
     els.dismissDataNoticeButton.addEventListener("click", dismissDataNotice);
     els.securityNoticeButton.addEventListener("click", openSecurityNoticeModal);
+    els.onboardingButton.addEventListener("click", openOnboardingModal);
     els.securityPromptMoreButton.addEventListener("click", openSecurityNoticeModal);
     els.securityPromptAcceptButton.addEventListener("click", acceptSecurityNotice);
     els.securityNoticeAcceptButton.addEventListener("click", acceptSecurityNotice);
@@ -280,6 +287,7 @@
       if (event.key !== "Escape") return;
       if (!els.securityNoticeModal.hidden) closeSecurityNoticeModal();
       if (!els.encryptedBackupModal.hidden) closeEncryptedBackupModal();
+      if (!els.onboardingModal.hidden) dismissOnboarding();
     });
     els.exportJsonButton.addEventListener("click", exportJsonBackup);
     els.exportEncryptedButton.addEventListener("click", openEncryptedExportModal);
@@ -299,6 +307,12 @@
     els.showEncryptedPassword.addEventListener("change", toggleEncryptedPasswordVisibility);
     els.encryptedBackupModal.addEventListener("click", (event) => {
       if (event.target === els.encryptedBackupModal) closeEncryptedBackupModal();
+    });
+    els.onboardingFinishButton.addEventListener("click", completeOnboarding);
+    els.onboardingSkipButton.addEventListener("click", dismissOnboarding);
+    els.onboardingCloseButton.addEventListener("click", dismissOnboarding);
+    els.onboardingModal.addEventListener("click", (event) => {
+      if (event.target === els.onboardingModal) dismissOnboarding();
     });
     els.cancelEditButton.addEventListener("click", resetForm);
     els.clearSelectionButton.addEventListener("click", () => {
@@ -348,6 +362,7 @@
     updateNotificationStatus();
     render();
     checkDueReminders();
+    if (!hasCompletedOnboarding()) openOnboardingModal();
     window.setInterval(checkDueReminders, REMINDER_CHECK_INTERVAL_MS);
   }
 
@@ -388,6 +403,33 @@
 
   function closeSecurityNoticeModal() {
     els.securityNoticeModal.hidden = true;
+    document.body.classList.remove("modal-open");
+  }
+
+  function hasCompletedOnboarding() {
+    return Boolean(window.localStorage.getItem(ONBOARDING_COMPLETED_AT_KEY));
+  }
+
+  function openOnboardingModal() {
+    els.onboardingModal.hidden = false;
+    document.body.classList.add("modal-open");
+    els.onboardingFinishButton.focus();
+  }
+
+  function completeOnboarding() {
+    window.localStorage.setItem(ONBOARDING_COMPLETED_AT_KEY, new Date().toISOString());
+    closeOnboardingModal();
+  }
+
+  function dismissOnboarding() {
+    if (!hasCompletedOnboarding()) {
+      window.localStorage.setItem(ONBOARDING_COMPLETED_AT_KEY, new Date().toISOString());
+    }
+    closeOnboardingModal();
+  }
+
+  function closeOnboardingModal() {
+    els.onboardingModal.hidden = true;
     document.body.classList.remove("modal-open");
   }
 
@@ -1611,23 +1653,76 @@
     const viewConfig = SCHEDULE_VIEWS[state.scheduleView] || SCHEDULE_VIEWS.next30;
     const empty = document.createElement("div");
     empty.className = "schedule-empty";
-    empty.innerHTML = `
-      <strong>${escapeHtml(viewConfig.emptyTitle)}</strong>
-      <span>${escapeHtml(viewConfig.emptyText)}</span>
-    `;
+    const emptyConfig = getScheduleEmptyConfig(viewConfig);
+    empty.append(createEmptyTitle(emptyConfig.title), createEmptyText(emptyConfig.text));
 
-    const button = document.createElement("button");
-    button.className = "secondary-button";
-    button.type = "button";
-    button.textContent = "Dodaj novo ročište";
-    button.addEventListener("click", () => {
-      resetForm();
-      setMobileView("form");
-      render();
-      els.fields.plaintiff.focus();
-    });
-    empty.append(button);
+    const actions = document.createElement("div");
+    actions.className = "empty-actions";
+    emptyConfig.actions.forEach((action) => actions.append(createEmptyActionButton(action)));
+    empty.append(actions);
     return empty;
+  }
+
+  function getScheduleEmptyConfig(viewConfig) {
+    if (state.hearings.length === 0) {
+      return {
+        title: "Još nema unesenih ročišta.",
+        text: "Dodajte prvo ročište kako biste počeli voditi osobni raspored.",
+        actions: [{ label: "Dodaj prvo ročište", variant: "primary", action: goToNewHearing }]
+      };
+    }
+
+    if (hasOnlyDeletedHearingsHidden()) {
+      return {
+        title: "Sva ročišta su obrisana.",
+        text: "Uključite prikaz obrisanih zapisa kako biste ih pregledali ili vratili.",
+        actions: [{ label: "Prikaži obrisane zapise", variant: "secondary", action: showDeletedRecords }]
+      };
+    }
+
+    return {
+      title: viewConfig.emptyTitle,
+      text: viewConfig.emptyText,
+      actions: [{ label: "Dodaj novo ročište", variant: "secondary", action: goToNewHearing }]
+    };
+  }
+
+  function createEmptyTitle(text) {
+    const title = document.createElement("strong");
+    title.textContent = text;
+    return title;
+  }
+
+  function createEmptyText(text) {
+    const description = document.createElement("span");
+    description.textContent = text;
+    return description;
+  }
+
+  function createEmptyActionButton(action) {
+    const button = document.createElement("button");
+    button.className = action.variant === "primary" ? "primary-button" : "secondary-button";
+    button.type = "button";
+    button.textContent = action.label;
+    button.addEventListener("click", action.action);
+    return button;
+  }
+
+  function goToNewHearing() {
+    resetForm();
+    setMobileView("form");
+    render();
+    els.fields.plaintiff.focus();
+  }
+
+  function showDeletedRecords() {
+    state.showDeleted = true;
+    setMobileView("schedule");
+    render();
+  }
+
+  function hasOnlyDeletedHearingsHidden() {
+    return !state.showDeleted && state.hearings.length > 0 && state.hearings.every(isDeletedHearing);
   }
 
   function createHearingButton(hearing, options = {}) {
@@ -1706,14 +1801,41 @@
     els.searchResults.append(heading);
 
     if (results.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "search-empty";
-      empty.textContent = "Nema rasprava koje odgovaraju pretrazi.";
-      els.searchResults.append(empty);
+      els.searchResults.append(createSearchEmptyState());
       return;
     }
 
     results.forEach((hearing) => els.searchResults.append(createSearchResultButton(hearing)));
+  }
+
+  function createSearchEmptyState() {
+    const empty = document.createElement("div");
+    empty.className = "search-empty";
+
+    if (hasOnlyDeletedHearingsHidden()) {
+      empty.append(
+        createEmptyTitle("Sva ročišta su obrisana."),
+        createEmptyText("Uključite prikaz obrisanih zapisa kako biste ih pronašli u pretrazi.")
+      );
+      const actions = document.createElement("div");
+      actions.className = "empty-actions";
+      actions.append(createEmptyActionButton({ label: "Prikaži obrisane zapise", variant: "secondary", action: showDeletedRecords }));
+      empty.append(actions);
+      return empty;
+    }
+
+    empty.append(
+      createEmptyTitle("Nema rezultata za zadane kriterije."),
+      createEmptyText("Promijenite kriterije pretrage ili dodajte novo ročište.")
+    );
+    const actions = document.createElement("div");
+    actions.className = "empty-actions";
+    actions.append(
+      createEmptyActionButton({ label: "Očisti filtre", variant: "secondary", action: clearFilters }),
+      createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearing })
+    );
+    empty.append(actions);
+    return empty;
   }
 
   function renderDetails() {

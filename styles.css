@@ -859,6 +859,9 @@ select.invalid {
 }
 
 .search-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
   padding: 14px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
@@ -868,9 +871,19 @@ select.invalid {
 }
 
 .search-empty.error {
+  display: block;
   border-color: rgba(184, 65, 65, 0.35);
   color: var(--danger);
   background: rgba(184, 65, 65, 0.08);
+}
+
+.search-empty strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.search-empty span {
+  font-size: 14px;
 }
 
 .compact-button {
@@ -995,6 +1008,12 @@ select.invalid {
 
 .schedule-empty span {
   font-size: 14px;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .load-more-wrap {
@@ -1174,6 +1193,18 @@ select.invalid {
   color: #3b4b48;
 }
 
+.onboarding-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+  color: #3b4b48;
+}
+
+.onboarding-list li {
+  padding-left: 4px;
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
@@ -1312,6 +1343,14 @@ select.invalid {
   }
 
   .notice-close {
+    width: 100%;
+  }
+
+  .empty-actions {
+    width: 100%;
+  }
+
+  .empty-actions button {
     width: 100%;
   }
 

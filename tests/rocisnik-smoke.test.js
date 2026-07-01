@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, "..");
 const STORAGE_KEY = "rocisnik.hearings.v1";
 const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
 const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
+const ONBOARDING_COMPLETED_AT_KEY = "onboardingCompletedAt";
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -83,6 +84,18 @@ async function run() {
 
     assert.equal(await page.title(), "Ročišnik");
     await assertVisibleText(page, "h1", "Ročišnik");
+    await assertVisibleText(page, "#onboardingModal", "Kako koristiti Ročišnik");
+    await assertVisibleText(page, "#onboardingModal", "Redovito izvozite sigurnosnu kopiju");
+    await page.click("#onboardingFinishButton");
+    assert.equal(await page.locator("#onboardingModal").isHidden(), true);
+    assert.ok(await page.evaluate((key) => localStorage.getItem(key), ONBOARDING_COMPLETED_AT_KEY));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#onboardingModal").isHidden(), true);
+    await page.click("#onboardingButton");
+    await assertVisibleText(page, "#onboardingModal", "Za osjetljive podatke koristite samo zaštićen uređaj.");
+    await page.click("#onboardingSkipButton");
+    assert.equal(await page.locator("#onboardingModal").isHidden(), true);
+
     await assertVisibleText(page, "#securityPrompt", "Sigurnosna napomena");
     await assertVisibleText(page, "#securityPrompt", "osjetljivih stvarnih podataka");
 
@@ -97,9 +110,37 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
     await assertScheduleViewActive(page, "next30");
-    await assertVisibleText(page, ".schedule-empty", "Nema ročišta u sljedećih 30 dana.");
+    await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
+    await assertVisibleText(page, ".schedule-empty", "Dodajte prvo ročište kako biste počeli voditi osobni raspored.");
+    await assertVisibleText(page, ".schedule-empty", "Dodaj prvo ročište");
+
+    const onlyDeleted = {
+      ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
+      deletedAt: new Date().toISOString()
+    };
+    await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: onlyDeleted });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await assertVisibleText(page, ".schedule-empty", "Sva ročišta su obrisana.");
+    await assertVisibleText(page, ".schedule-empty", "Prikaži obrisane zapise");
+    await page.click(".schedule-empty button");
+    assert.equal(await page.locator("#showDeletedToggle").isChecked(), true);
+    await assertScheduleIncludes(page, "Obrisano Samo");
+
+    const futureOnly = buildStoredHearing("future-only-record", addDays(startOfDay(new Date()), 45), "Daleki Termin", "Test Osoba");
+    await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: futureOnly });
+    await page.reload({ waitUntil: "domcontentloaded" });
     await page.click('[data-schedule-view="today"]');
     await assertVisibleText(page, ".schedule-empty", "Nema ročišta danas.");
+    await page.click('[data-schedule-view="week"]');
+    await assertVisibleText(page, ".schedule-empty", "Nema ročišta ovaj tjedan.");
+    await page.click('[data-schedule-view="next30"]');
+    await assertVisibleText(page, ".schedule-empty", "Nema ročišta u sljedećih 30 dana.");
+    await page.click('[data-schedule-view="all"]');
+    await assertScheduleIncludes(page, "Daleki Termin");
+
+    await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+    await page.reload({ waitUntil: "domcontentloaded" });
+
     await page.click(".schedule-empty button");
     await assertVisibleText(page, "#formTitle", "Dodaj ročište");
     await page.click('[data-schedule-view="next30"]');
@@ -265,6 +306,14 @@ async function run() {
     await page.uncheck("#showDeletedToggle");
 
     await page.click("#clearFiltersButton");
+    await page.fill("#filterPlaintiff", "Ne postoji");
+    await page.click("#searchButton");
+    await assertVisibleText(page, ".search-empty", "Nema rezultata za zadane kriterije.");
+    await assertVisibleText(page, ".search-empty", "Očisti filtre");
+    await assertVisibleText(page, ".search-empty", "Dodaj novo ročište");
+    await page.locator(".search-empty button").filter({ hasText: "Očisti filtre" }).click();
+    await assertVisibleText(page, ".search-empty", "Upiši kriterij i pritisni Pretraži.");
+
     await page.fill("#filterPlaintiff", "Croatia");
     await page.selectOption("#filterStatus", "zakazano");
     await page.click("#searchButton");

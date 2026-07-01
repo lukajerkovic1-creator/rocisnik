@@ -21,6 +21,7 @@
         <div class="topbar-actions">
           <button class="text-button" type="button" id="dataSafetyButton">Sigurnost podataka</button>
           <button class="text-button" type="button" id="securityNoticeButton">Zaštita podataka</button>
+          <button class="text-button" type="button" id="onboardingButton">Kako koristiti</button>
           <button class="ghost-button" type="button" id="clearSelectionButton">Novi unos</button>
         </div>
       </header>
@@ -406,6 +407,25 @@
         <div class="modal-actions">
           <button class="primary-button" type="button" id="encryptedBackupConfirmButton">Nastavi</button>
           <button class="ghost-button" type="button" id="encryptedBackupCancelButton">Odustani</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="onboardingModal" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" hidden>
+      <section class="modal-panel">
+        <div class="modal-heading">
+          <h2 id="onboardingTitle">Kako koristiti Ročišnik</h2>
+          <button class="icon-close" type="button" id="onboardingCloseButton" aria-label="Zatvori">&times;</button>
+        </div>
+        <ol class="onboarding-list">
+          <li>Dodajte ročište s brojem predmeta, strankama, datumom i vremenom.</li>
+          <li>Koristite poglede Danas, Ovaj tjedan i Sljedećih 30 dana za brzi raspored.</li>
+          <li>Redovito izvozite sigurnosnu kopiju jer su podaci spremljeni lokalno u pregledniku.</li>
+          <li>Za osjetljive podatke koristite samo zaštićen uređaj.</li>
+        </ol>
+        <div class="modal-actions">
+          <button class="primary-button" type="button" id="onboardingFinishButton">Završi</button>
+          <button class="ghost-button" type="button" id="onboardingSkipButton">Preskoči</button>
         </div>
       </section>
     </div>
