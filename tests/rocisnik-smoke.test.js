@@ -142,6 +142,11 @@ async function run() {
       const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
       const quickAdd = document.querySelector(".quick-add-button")?.getBoundingClientRect();
+      const backupIconTargets = ["#exportJsonButton", "#importJsonButton", "#exportEncryptedButton"];
+      const backupButtonsHaveIcons = backupIconTargets.every((selector) => {
+        const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
+        return iconStyle.content === '""' && iconStyle.maskImage !== "none";
+      });
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
@@ -160,7 +165,8 @@ async function run() {
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
         searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false,
-        quickAddCompact: quickAdd ? quickAdd.height <= 36 : false
+        quickAddCompact: quickAdd ? quickAdd.height <= 36 : false,
+        backupButtonsHaveIcons
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
@@ -177,6 +183,7 @@ async function run() {
     assert.equal(desktopLayout.searchActionsBeforePresets, true);
     assert.equal(desktopLayout.searchActionsInFirstViewport, true);
     assert.equal(desktopLayout.quickAddCompact, true);
+    assert.equal(desktopLayout.backupButtonsHaveIcons, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
