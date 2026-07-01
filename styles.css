@@ -241,14 +241,21 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   max-width: 1440px;
-  margin: 0 auto 14px;
-  padding: 12px 14px;
+  margin: 0 auto 10px;
+  padding: 8px 12px;
   border: 1px solid rgba(15, 107, 99, 0.18);
   border-radius: var(--radius);
   color: var(--accent-strong);
   background: #edf7f4;
+}
+
+.backup-reminder > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .data-notice h2,
@@ -260,11 +267,25 @@ select:focus-visible {
   font-weight: 760;
 }
 
+.backup-reminder h2 {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 .data-notice p,
 .security-prompt p,
 .backup-reminder p {
   margin: 0;
   font-size: 13px;
+}
+
+.backup-reminder p {
+  min-width: 0;
+  color: #31504b;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .data-notice .notice-close {
@@ -322,6 +343,12 @@ select:focus-visible {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.backup-reminder-actions .compact-button {
+  min-height: 32px;
+  padding-inline: 12px;
+  font-size: 12px;
 }
 
 .security-prompt-actions {
@@ -2673,6 +2700,17 @@ select.invalid {
     gap: 10px;
     margin-bottom: 10px;
     padding: 12px;
+  }
+
+  .backup-reminder > div:first-child {
+    display: grid;
+    gap: 4px;
+  }
+
+  .backup-reminder p {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .backup-reminder-actions {

@@ -347,6 +347,18 @@ async function run() {
     assert.ok(hearings[0].history[0].eventId);
     assert.deepEqual(hearings[0].reminders.map((reminder) => reminder.minutesBefore).sort((a, b) => a - b), [30, 120]);
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
+    const backupReminderChrome = await page.locator("#backupReminder").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const actionButtons = element.querySelectorAll(".backup-reminder-actions button");
+      return {
+        height: rect.height,
+        buttonCount: actionButtons.length,
+        firstActionVisible: actionButtons[0]?.getBoundingClientRect().height > 0
+      };
+    });
+    assert.ok(backupReminderChrome.height <= 56, `Backup reminder should stay compact, got ${backupReminderChrome.height}px`);
+    assert.equal(backupReminderChrome.buttonCount, 3);
+    assert.equal(backupReminderChrome.firstActionVisible, true);
     await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#remindersList", "2 sata prije");
     await assertVisibleText(page, ".utility-view .utility-reminder-count", "1");
