@@ -4,6 +4,13 @@
   const STORAGE_KEY = "rocisnik.hearings.v1";
   const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
   const BACKUP_FORMAT_VERSION = 1;
+  const DEFAULT_HEARING_STATUS = "zakazano";
+  const HEARING_STATUSES = [
+    { value: "zakazano", label: "Zakazano", className: "status-scheduled" },
+    { value: "odgođeno", label: "Odgođeno", className: "status-postponed" },
+    { value: "otkazano", label: "Otkazano", className: "status-canceled" },
+    { value: "održano", label: "Održano", className: "status-held" }
+  ];
   const DAY_NAMES = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
   const MONTH_NAMES_GENITIVE = [
     "siječnja",
@@ -48,7 +55,8 @@
       defendant: "",
       subject: "",
       value: "",
-      other: ""
+      other: "",
+      status: ""
     }
   };
 
@@ -75,7 +83,8 @@
       defendant: document.getElementById("filterDefendant"),
       subject: document.getElementById("filterSubject"),
       value: document.getElementById("filterValue"),
-      other: document.getElementById("filterOther")
+      other: document.getElementById("filterOther"),
+      status: document.getElementById("filterStatus")
     },
     searchButton: document.getElementById("searchButton"),
     clearFiltersButton: document.getElementById("clearFiltersButton"),
@@ -94,6 +103,7 @@
       defendant: document.getElementById("defendant"),
       caseNumber: document.getElementById("caseNumber"),
       hearingDateTime: document.getElementById("hearingDateTime"),
+      status: document.getElementById("hearingStatus"),
       disputeSubject: document.getElementById("disputeSubject"),
       disputeValue: document.getElementById("disputeValue"),
       specificity: document.getElementById("specificity")
@@ -106,6 +116,7 @@
     detailsParties: document.getElementById("detailsParties"),
     detailsCaseNumber: document.getElementById("detailsCaseNumber"),
     detailsDateTime: document.getElementById("detailsDateTime"),
+    detailsStatus: document.getElementById("detailsStatus"),
     detailsDisputeSubject: document.getElementById("detailsDisputeSubject"),
     detailsDisputeValue: document.getElementById("detailsDisputeValue"),
     detailsSpecificity: document.getElementById("detailsSpecificity"),
@@ -125,6 +136,7 @@
     state.visibleStart = weekStart;
     state.visibleEnd = getDefaultVisibleEnd();
     fillMonthSelect();
+    fillStatusSelects();
     els.monthSelect.value = String(startOfToday.getMonth());
     els.yearInput.value = String(startOfToday.getFullYear());
     updateRangeLabel();
@@ -297,6 +309,7 @@
       defendant,
       caseNumber,
       hearingDateTime,
+      status: normalizeStatus(item.status),
       disputeSubject: getOptionalImportString(item.disputeSubject),
       disputeValue: getOptionalImportString(item.disputeValue),
       specificity: getOptionalImportString(item.specificity),
@@ -423,6 +436,7 @@
       defendant: els.fields.defendant.value.trim(),
       caseNumber: els.fields.caseNumber.value.trim(),
       hearingDateTime: els.fields.hearingDateTime.value,
+      status: normalizeStatus(els.fields.status.value),
       disputeSubject: els.fields.disputeSubject.value.trim(),
       disputeValue: els.fields.disputeValue.value.trim(),
       specificity: els.fields.specificity.value.trim()
@@ -435,6 +449,7 @@
     if (!data.defendant) errors.push(["defendant", "Upiši tuženika."]);
     if (!data.caseNumber) errors.push(["caseNumber", "Upiši broj predmeta."]);
     if (!data.hearingDateTime) errors.push(["hearingDateTime", "Odaberi datum i sat ročišta."]);
+    if (!isAllowedStatus(data.status)) errors.push(["status", "Odaberi ispravan status ročišta."]);
     return errors;
   }
 
@@ -644,9 +659,11 @@
     button.className = "hearing-button";
     if (hearing.id === state.selectedId) button.classList.add("selected");
     if (isDeletedHearing(hearing)) button.classList.add("deleted");
+    button.classList.add(getStatusClass(hearing.status));
     button.innerHTML = `
       <span class="hearing-time">${formatTime(new Date(hearing.hearingDateTime))}</span>
       <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
+      ${createStatusBadgeHtml(hearing.status)}
       ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
     `;
     button.addEventListener("click", () => {
@@ -664,10 +681,12 @@
     button.className = "search-result-button";
     if (hearing.id === state.selectedId) button.classList.add("selected");
     if (isDeletedHearing(hearing)) button.classList.add("deleted");
+    button.classList.add(getStatusClass(hearing.status));
     button.innerHTML = `
       <span class="search-result-date">${formatLongDateTime(date)}</span>
       <span class="search-result-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
       <span class="search-result-meta">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}${hearing.disputeSubject ? ` | ${escapeHtml(hearing.disputeSubject)}` : ""}</span>
+      ${createStatusBadgeHtml(hearing.status)}
       ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing, true))}</span>` : ""}
     `;
     button.addEventListener("click", () => {
@@ -725,6 +744,7 @@
     els.detailsParties.textContent = `${hearing.plaintiff} - ${hearing.defendant}`;
     els.detailsCaseNumber.textContent = hearing.caseNumber;
     els.detailsDateTime.textContent = formatLongDateTime(date);
+    els.detailsStatus.replaceChildren(createStatusBadge(hearing.status));
     els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
     els.detailsDisputeValue.textContent = hearing.disputeValue || "Nije uneseno";
     els.detailsSpecificity.textContent = hearing.specificity || "Nije uneseno";
@@ -754,6 +774,7 @@
     els.fields.defendant.value = hearing.defendant;
     els.fields.caseNumber.value = hearing.caseNumber;
     els.fields.hearingDateTime.value = hearing.hearingDateTime;
+    els.fields.status.value = normalizeStatus(hearing.status);
     els.fields.disputeSubject.value = hearing.disputeSubject;
     els.fields.disputeValue.value = hearing.disputeValue;
     els.fields.specificity.value = hearing.specificity;
@@ -807,6 +828,7 @@
     els.form.reset();
     els.fields.id.value = "";
     setDefaultDateTime();
+    els.fields.status.value = DEFAULT_HEARING_STATUS;
     if (!options.keepMessage) clearValidation();
     updateFormMode();
   }
@@ -815,6 +837,7 @@
     const nextHour = new Date();
     nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
     els.fields.hearingDateTime.value = toDateTimeInputValue(nextHour);
+    els.fields.status.value = DEFAULT_HEARING_STATUS;
   }
 
   function setMobileView(view) {
@@ -858,8 +881,49 @@
     return `Obrisano ${includeTime ? formatLongDateTime(deletedDate) : formatShortDate(deletedDate)}`;
   }
 
+  function isAllowedStatus(value) {
+    return HEARING_STATUSES.some((status) => status.value === value);
+  }
+
+  function normalizeStatus(value, fallback = DEFAULT_HEARING_STATUS) {
+    const normalized = normalizeSearch(value);
+    const aliases = {
+      zakazano: "zakazano",
+      odgodeno: "odgođeno",
+      otkazano: "otkazano",
+      odrzano: "održano"
+    };
+    return aliases[normalized] || fallback;
+  }
+
+  function getStatusConfig(value) {
+    const status = normalizeStatus(value);
+    return HEARING_STATUSES.find((item) => item.value === status) || HEARING_STATUSES[0];
+  }
+
+  function getStatusClass(value) {
+    return getStatusConfig(value).className;
+  }
+
+  function getStatusLabel(value) {
+    return getStatusConfig(value).label;
+  }
+
+  function createStatusBadge(value) {
+    const badge = document.createElement("span");
+    badge.className = `status-badge ${getStatusClass(value)}`;
+    badge.textContent = getStatusLabel(value);
+    return badge;
+  }
+
+  function createStatusBadgeHtml(value) {
+    return `<span class="status-badge ${escapeHtml(getStatusClass(value))}">${escapeHtml(getStatusLabel(value))}</span>`;
+  }
+
   function matchesFilters(hearing) {
     const filters = state.filters;
+    if (filters.status && normalizeStatus(hearing.status) !== filters.status) return false;
+
     const checks = [
       [filters.plaintiff, hearing.plaintiff],
       [filters.defendant, hearing.defendant],
@@ -885,7 +949,7 @@
 
   function applySearch() {
     Object.entries(els.filters).forEach(([key, input]) => {
-      state.filters[key] = normalizeSearch(input.value);
+      state.filters[key] = key === "status" ? normalizeStatus(input.value, "") : normalizeSearch(input.value);
     });
     state.searchSubmitted = true;
     render();
@@ -961,13 +1025,41 @@
     });
   }
 
+  function fillStatusSelects() {
+    els.fields.status.replaceChildren();
+    HEARING_STATUSES.forEach((status) => {
+      const option = document.createElement("option");
+      option.value = status.value;
+      option.textContent = status.label;
+      els.fields.status.append(option);
+    });
+    els.fields.status.value = DEFAULT_HEARING_STATUS;
+
+    els.filters.status.replaceChildren();
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "Svi statusi";
+    els.filters.status.append(allOption);
+    HEARING_STATUSES.forEach((status) => {
+      const option = document.createElement("option");
+      option.value = status.value;
+      option.textContent = status.label;
+      els.filters.status.append(option);
+    });
+  }
+
   function loadHearings() {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((item) => item && item.id && item.hearingDateTime);
+      return parsed
+        .filter((item) => item && item.id && item.hearingDateTime)
+        .map((item) => ({
+          ...item,
+          status: normalizeStatus(item.status)
+        }));
     } catch (error) {
       return [];
     }

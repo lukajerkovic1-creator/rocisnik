@@ -55,7 +55,8 @@ button {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid rgba(15, 107, 99, 0.22);
   outline-offset: 2px;
 }
@@ -310,6 +311,11 @@ input.invalid {
   background: var(--danger-soft);
 }
 
+select.invalid {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
 .form-message {
   min-height: 22px;
   font-size: 13px;
@@ -481,6 +487,21 @@ input.invalid {
   background: #fff8f8;
 }
 
+.hearing-button.status-postponed,
+.search-result-button.status-postponed {
+  border-left-color: #b26b23;
+}
+
+.hearing-button.status-canceled,
+.search-result-button.status-canceled {
+  border-left-color: var(--danger);
+}
+
+.hearing-button.status-held,
+.search-result-button.status-held {
+  border-left-color: #6d7c79;
+}
+
 .search-result-date {
   color: var(--accent-strong);
   font-size: 13px;
@@ -502,7 +523,8 @@ input.invalid {
 }
 
 .deleted-badge,
-.deleted-status {
+.deleted-status,
+.status-badge {
   width: fit-content;
   border-radius: 999px;
   color: var(--danger);
@@ -514,6 +536,32 @@ input.invalid {
 .deleted-badge {
   margin-top: 4px;
   padding: 3px 7px;
+}
+
+.status-badge {
+  margin-top: 5px;
+  padding: 3px 7px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.status-badge.status-postponed {
+  color: #7b4814;
+  background: #fff3df;
+}
+
+.status-badge.status-canceled {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-badge.status-held {
+  color: #465351;
+  background: #eef2f1;
+}
+
+.details-list .status-badge {
+  margin-top: 0;
 }
 
 .deleted-status {

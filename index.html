@@ -89,6 +89,11 @@
                 <input id="hearingDateTime" name="hearingDateTime" type="datetime-local" required>
               </label>
 
+              <label>
+                <span>Status ročišta</span>
+                <select id="hearingStatus" name="hearingStatus"></select>
+              </label>
+
               <label class="full-row">
                 <span>Predmet spora</span>
                 <input id="disputeSubject" name="disputeSubject" type="text" autocomplete="off">
@@ -183,6 +188,11 @@
               <span>Drugo</span>
               <input id="filterOther" type="search" autocomplete="off" placeholder="Broj predmeta ili specifičnost">
             </label>
+
+            <label>
+              <span>Status</span>
+              <select id="filterStatus"></select>
+            </label>
           </div>
 
           <div class="search-actions">
@@ -221,6 +231,10 @@
               <div>
                 <dt>Datum i sat ročišta</dt>
                 <dd id="detailsDateTime"></dd>
+              </div>
+              <div>
+                <dt>Status ročišta</dt>
+                <dd id="detailsStatus"></dd>
               </div>
               <div>
                 <dt>Predmet spora</dt>
