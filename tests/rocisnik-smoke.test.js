@@ -360,10 +360,10 @@ async function run() {
 
     await page.click(".search-result-button");
     await assertVisibleText(page, "#detailsParties", "P-123/2026");
-    await assertVisibleText(page, "#detailsSubtitle", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#detailsHeaderStatus", "Zakazano");
-    await assertVisibleText(page, "#detailsStatus", "Zakazano");
     await assertVisibleText(page, "#moreDetailsButton", "Više");
+    await assertVisibleText(page, "#detailsCaseParties", "Croatia osiguranje - Marko Markovic");
+    assert.equal(await page.locator(".side-column .details-panel").evaluate((element) => element.scrollHeight <= element.clientHeight + 1), true);
     assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), false);
     await page.click("#moreDetailsButton");
     assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), true);
@@ -375,7 +375,7 @@ async function run() {
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings[0].status, "otkazano");
     assert.ok(hearings[0].history.some((event) => event.eventType === "status-changed" && event.changedFields.includes("status")));
-    await assertVisibleText(page, "#detailsStatus", "Otkazano");
+    await assertVisibleText(page, "#detailsHeaderStatus", "Otkazano");
     await openHistoryPanel(page);
     await assertVisibleText(page, "#detailsHistory", "Status promijenjen");
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");

@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=40">
+    <link rel="stylesheet" href="styles.css?v=41">
   </head>
   <body>
     <div class="app-shell">
@@ -412,7 +412,7 @@
         <aside class="details-panel mobile-view" data-view="details" aria-labelledby="detailsTitle">
           <div class="panel-heading">
             <div>
-              <h2 id="detailsTitle">Detalji rasprave</h2>
+              <h2 id="detailsTitle">Detalji ročišta</h2>
               <p id="detailsSubtitle">Odaberi raspravu za prikaz detalja.</p>
             </div>
             <div class="details-header-status" id="detailsHeaderStatus" hidden></div>
@@ -428,6 +428,7 @@
             <div class="case-title">
               <span id="detailsTime"></span>
               <h3 id="detailsParties"></h3>
+              <p class="case-parties" id="detailsCaseParties"></p>
             </div>
 
             <div class="detail-actions">
@@ -438,7 +439,7 @@
             </div>
 
             <dl class="details-list">
-              <div>
+              <div class="detail-case-number">
                 <dt>Broj predmeta</dt>
                 <dd id="detailsCaseNumber"></dd>
               </div>
@@ -446,7 +447,7 @@
                 <dt>Datum i sat ročišta</dt>
                 <dd id="detailsDateTime"></dd>
               </div>
-              <div>
+              <div class="detail-status-row">
                 <dt>Status ročišta</dt>
                 <dd id="detailsStatus"></dd>
               </div>
@@ -613,6 +614,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=40"></script>
+    <script src="app.js?v=41"></script>
   </body>
 </html>

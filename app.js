@@ -273,6 +273,7 @@
     detailsSubtitle: document.getElementById("detailsSubtitle"),
     detailsTime: document.getElementById("detailsTime"),
     detailsParties: document.getElementById("detailsParties"),
+    detailsCaseParties: document.getElementById("detailsCaseParties"),
     detailsCaseNumber: document.getElementById("detailsCaseNumber"),
     detailsDateTime: document.getElementById("detailsDateTime"),
     detailsStatus: document.getElementById("detailsStatus"),
@@ -2108,6 +2109,7 @@
       els.detailsHeaderStatus.hidden = true;
       els.detailsHeaderStatus.replaceChildren();
       els.detailsSubtitle.textContent = "Odaberi raspravu za prikaz detalja.";
+      els.detailsCaseParties.textContent = "";
       return;
     }
 
@@ -2119,6 +2121,7 @@
     els.detailsSubtitle.textContent = `${hearing.plaintiff} - ${hearing.defendant}`;
     els.detailsTime.textContent = formatTime(date);
     els.detailsParties.textContent = hearing.caseNumber || "Bez broja predmeta";
+    els.detailsCaseParties.textContent = `${hearing.plaintiff} - ${hearing.defendant}`;
     els.detailsCaseNumber.textContent = hearing.caseNumber;
     els.detailsDateTime.textContent = formatLongDateTime(date);
     els.detailsStatus.replaceChildren(createStatusBadge(hearing.status));
