@@ -142,6 +142,14 @@ async function run() {
       const topbarActionIconStyle = getComputedStyle(document.querySelector(".topbar-action-icon"));
       const topbarActionSvg = document.querySelector(".topbar-action-icon svg")?.getBoundingClientRect();
       const detailActionButtons = ["#editButton", "#deleteButton", "#moreDetailsButton"];
+      const statusBadgeProbe = document.createElement("span");
+      statusBadgeProbe.className = "status-badge";
+      statusBadgeProbe.hidden = true;
+      document.body.append(statusBadgeProbe);
+      const statusBadgeStyle = getComputedStyle(statusBadgeProbe);
+      const statusBadgeTextTransform = statusBadgeStyle.textTransform;
+      const statusBadgeFontSize = Number.parseFloat(statusBadgeStyle.fontSize);
+      statusBadgeProbe.remove();
       const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
       const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
@@ -176,6 +184,8 @@ async function run() {
           const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
           return iconStyle.content === '""' && iconStyle.maskImage !== "none";
         }),
+        statusBadgesAreUppercase: statusBadgeTextTransform === "uppercase"
+          && statusBadgeFontSize <= 11,
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
@@ -200,6 +210,7 @@ async function run() {
     assert.equal(desktopLayout.topNewButtonHasIcon, true);
     assert.equal(desktopLayout.topbarActionIconsAreLightweight, true);
     assert.equal(desktopLayout.detailActionButtonsHaveIcons, true);
+    assert.equal(desktopLayout.statusBadgesAreUppercase, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
     assert.equal(desktopLayout.importSummaryIsSubtle, true);
@@ -314,7 +325,7 @@ async function run() {
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleIncludes(page, "Datum Deset");
     await assertScheduleIncludes(page, "Datum Otkazano");
-    await assertScheduleIncludes(page, "Odgođeno");
+    await assertScheduleIncludes(page, "ODGOĐENO");
     await assertScheduleExcludes(page, "Datum Jucer");
     await assertScheduleExcludes(page, "Datum Cetrdeset");
     await assertScheduleExcludes(page, "Datum Obrisano");
@@ -427,11 +438,11 @@ async function run() {
     await page.selectOption("#filterStatus", "zakazano");
     await page.click("#searchButton");
     await assertVisibleText(page, ".search-results-heading", "1 pronađena rasprava");
-    await assertVisibleText(page, ".search-result-button", "Zakazano");
+    await assertVisibleText(page, ".search-result-button", "ZAKAZANO");
 
     await page.click(".search-result-button");
     await assertVisibleText(page, "#detailsParties", "P-123/2026");
-    await assertVisibleText(page, "#detailsHeaderStatus", "Zakazano");
+    await assertVisibleText(page, "#detailsHeaderStatus", "ZAKAZANO");
     await assertVisibleText(page, "#moreDetailsButton", "Više");
     await assertVisibleText(page, "#detailsCaseParties", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#detailsPlaintiff", "Croatia osiguranje");
@@ -452,7 +463,7 @@ async function run() {
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings[0].status, "otkazano");
     assert.ok(hearings[0].history.some((event) => event.eventType === "status-changed" && event.changedFields.includes("status")));
-    await assertVisibleText(page, "#detailsHeaderStatus", "Otkazano");
+    await assertVisibleText(page, "#detailsHeaderStatus", "OTKAZANO");
     await openHistoryPanel(page);
     await assertVisibleText(page, "#detailsHistory", "Status promijenjen");
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
