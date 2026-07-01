@@ -1463,17 +1463,14 @@ select.invalid {
   background: #f6f8f7;
 }
 
-.hearing-button.status-postponed,
 .search-result-button.status-postponed {
   border-left-color: #b26b23;
 }
 
-.hearing-button.status-canceled,
 .search-result-button.status-canceled {
   border-left-color: var(--danger);
 }
 
-.hearing-button.status-held,
 .search-result-button.status-held {
   border-left-color: #6d7c79;
 }
@@ -1660,7 +1657,7 @@ select.invalid {
   padding: 7px 16px;
   border: 0;
   border-top: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
+  border-left: 4px solid transparent;
   border-radius: 0;
   color: var(--text);
   background: #fff;

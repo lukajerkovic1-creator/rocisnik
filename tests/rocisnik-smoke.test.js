@@ -387,6 +387,27 @@ async function run() {
     await assertScheduleExcludes(page, "Datum Jucer");
     await assertScheduleExcludes(page, "Datum Cetrdeset");
     await assertScheduleExcludes(page, "Datum Obrisano");
+    const unselectedRowChrome = await page.evaluate(() => {
+      const row = Array.from(document.querySelectorAll(".hearing-button"))
+        .find((button) => button.innerText.includes("Datum Odgodeno"));
+      return row ? getComputedStyle(row).borderLeftColor : "";
+    });
+    assert.equal(unselectedRowChrome, "rgba(0, 0, 0, 0)");
+    await page.locator(".hearing-button", { hasText: "Datum Danas" }).click();
+    const selectedRowChrome = await page.evaluate(() => {
+      const row = document.querySelector(".hearing-button.selected");
+      if (!row) return null;
+      const style = getComputedStyle(row);
+      return {
+        text: row.innerText,
+        borderLeftColor: style.borderLeftColor,
+        backgroundColor: style.backgroundColor
+      };
+    });
+    assert.ok(selectedRowChrome?.text.includes("Datum Danas"));
+    assert.notEqual(selectedRowChrome?.borderLeftColor, "rgba(0, 0, 0, 0)");
+    assert.notEqual(selectedRowChrome?.backgroundColor, "rgb(255, 255, 255)");
+    await assertVisibleText(page, "#detailsParties", "P-date-filter-today");
 
     await page.click('.schedule-view-tabs [data-schedule-view="today"]');
     await assertScheduleViewActive(page, "today");
