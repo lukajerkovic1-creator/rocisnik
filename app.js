@@ -1295,7 +1295,8 @@
     const activeView = state.currentUtilityView;
     document.body.dataset.utilityView = activeView;
     els.entryPanel.classList.toggle("utility-active", activeView === "form");
-    els.searchPanel.classList.toggle("utility-active", activeView === "search");
+    els.searchPanel.classList.toggle("utility-active", activeView === "search" || activeView === "reminders");
+    els.remindersPanel.classList.toggle("utility-active", activeView === "reminders");
     els.utilityButtons.forEach((button) => {
       const isActive = button.dataset.utilityView === activeView;
       button.classList.toggle("active", isActive);
@@ -1313,6 +1314,9 @@
       return;
     }
     if (view === "reminders") {
+      state.currentUtilityView = "reminders";
+      setMobileView("search");
+      render();
       els.remindersPanel.scrollIntoView({ behavior: "smooth", block: "start" });
       els.enableNotificationsButton.focus({ preventScroll: true });
       return;

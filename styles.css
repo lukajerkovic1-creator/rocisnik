@@ -2973,6 +2973,14 @@ select.invalid {
     display: grid;
   }
 
+  .reminders-panel {
+    display: none;
+  }
+
+  .reminders-panel.utility-active {
+    display: block;
+  }
+
   .schedule-panel > .panel-heading {
     position: absolute;
     width: 1px;

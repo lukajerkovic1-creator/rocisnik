@@ -289,11 +289,15 @@ async function run() {
     await assertVisibleText(page, "#formTitle", "Dodaj ročište");
     await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
 
+    assert.equal(await page.locator(".reminders-panel").isVisible(), false);
+    await page.click('.entry-panel [data-utility-view="reminders"]');
+    assert.equal(await page.locator(".reminders-panel").isVisible(), true);
     assert.equal(await page.locator("#defaultReminderSelect").inputValue(), "1d");
     assert.equal(await page.locator("#reminder1d").isChecked(), true);
     await page.selectOption("#defaultReminderSelect", "2h");
     assert.equal(await page.locator("#reminder2h").isChecked(), true);
     assert.equal(await page.locator("#reminder1d").isChecked(), false);
+    await page.click('.search-panel [data-utility-view="form"]');
 
     await fillRequiredHearing(page);
     await page.check("#reminderCustomEnabled");
@@ -359,9 +363,10 @@ async function run() {
     assert.ok(backupReminderChrome.height <= 56, `Backup reminder should stay compact, got ${backupReminderChrome.height}px`);
     assert.equal(backupReminderChrome.buttonCount, 3);
     assert.equal(backupReminderChrome.firstActionVisible, true);
+    await page.click('.entry-panel [data-utility-view="reminders"]');
     await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#remindersList", "2 sata prije");
-    await assertVisibleText(page, ".utility-view .utility-reminder-count", "1");
+    await assertVisibleText(page, ".search-panel .utility-reminder-count", "1");
 
     await page.click('[data-reminder-action="seen"]');
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
@@ -586,6 +591,7 @@ async function run() {
     await assertVisibleText(page, "#detailsHeaderStatus", "OTKAZANO");
     await openHistoryPanel(page);
     await assertVisibleText(page, "#detailsHistory", "Status promijenjen");
+    await page.click('.search-panel [data-utility-view="reminders"]');
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
 
     await page.selectOption("#filterStatus", "otkazano");
