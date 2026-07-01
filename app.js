@@ -32,6 +32,33 @@
     { value: "održano", label: "Održano", className: "status-held" }
   ];
   const DAY_NAMES = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
+  const SCHEDULE_VIEWS = {
+    today: {
+      label: "Danas",
+      emptyTitle: "Nema ročišta danas.",
+      emptyText: "Dodaj novo ročište ili odaberi širi vremenski pregled."
+    },
+    week: {
+      label: "Ovaj tjedan",
+      emptyTitle: "Nema ročišta ovaj tjedan.",
+      emptyText: "Ročišta za aktualni tjedan pojavit će se ovdje."
+    },
+    next30: {
+      label: "Sljedećih 30 dana",
+      emptyTitle: "Nema ročišta u sljedećih 30 dana.",
+      emptyText: "Za pregled udaljenijih termina odaberi Sve ili skoči na mjesec."
+    },
+    all: {
+      label: "Sve",
+      emptyTitle: "Nema aktivnih ročišta.",
+      emptyText: "Kad dodaš ročište, pojavit će se ovdje kronološki."
+    },
+    custom: {
+      label: "Odabrano razdoblje",
+      emptyTitle: "Nema ročišta u odabranom razdoblju.",
+      emptyText: "Promijeni mjesec ili dodaj novo ročište."
+    }
+  };
   const MONTH_NAMES_GENITIVE = [
     "siječnja",
     "veljače",
@@ -66,6 +93,7 @@
     selectedId: null,
     editingId: null,
     currentMobileView: "schedule",
+    scheduleView: "next30",
     visibleStart: null,
     visibleEnd: null,
     showDeleted: false,
@@ -118,6 +146,8 @@
     jumpButton: document.getElementById("jumpButton"),
     todayButton: document.getElementById("todayButton"),
     loadMoreButton: document.getElementById("loadMoreButton"),
+    loadMoreWrap: document.querySelector(".load-more-wrap"),
+    scheduleViewButtons: Array.from(document.querySelectorAll("[data-schedule-view]")),
     showDeletedToggle: document.getElementById("showDeletedToggle"),
     filters: {
       plaintiff: document.getElementById("filterPlaintiff"),
@@ -239,6 +269,9 @@
     });
     els.jumpButton.addEventListener("click", jumpToSelectedMonth);
     els.todayButton.addEventListener("click", scrollToToday);
+    els.scheduleViewButtons.forEach((button) => {
+      button.addEventListener("click", () => setScheduleView(button.dataset.scheduleView));
+    });
     els.loadMoreButton.addEventListener("click", () => {
       state.visibleEnd = endOfMonth(addMonths(state.visibleEnd, 6));
       render();
@@ -483,6 +516,7 @@
     }
 
     const dates = hearings.map((hearing) => new Date(hearing.hearingDateTime)).sort((a, b) => a - b);
+    state.scheduleView = "custom";
     state.visibleStart = startOfMonth(dates[0]);
     state.visibleEnd = endOfMonth(addMonths(dates[dates.length - 1], 3));
     setMobileView("schedule");
@@ -1115,6 +1149,7 @@
   function render() {
     updateRangeLabel();
     els.showDeletedToggle.checked = state.showDeleted;
+    updateScheduleViewButtons();
     renderSecurityPrompt();
     renderBackupReminder();
     renderReminders();
@@ -1126,7 +1161,13 @@
 
   function renderCalendar() {
     els.calendarGrid.replaceChildren();
-    const visibleDays = getVisibleDays();
+    const visibleHearings = getScheduleHearings();
+    if (visibleHearings.length === 0) {
+      els.calendarGrid.append(createScheduleEmptyState());
+      return;
+    }
+
+    const visibleDays = getScheduleDays(visibleHearings);
     let lastMonthKey = "";
 
     visibleDays.forEach((day) => {
@@ -1140,53 +1181,77 @@
         lastMonthKey = monthKey;
       }
 
-      const dayCard = document.createElement("article");
-      dayCard.className = "day-card";
-      dayCard.id = `day-${toDateKey(day)}`;
-      if (isSameDay(day, startOfToday)) dayCard.classList.add("today");
-
-      const head = document.createElement("div");
-      head.className = "day-head";
-
-      const dayText = document.createElement("div");
-      dayText.innerHTML = `<div class="day-name">${DAY_NAMES[day.getDay()]}</div><div class="day-date">${day.getDate()}.</div>`;
-
-      const month = document.createElement("div");
-      month.className = "day-name";
-      month.textContent = MONTH_NAMES_NOMINATIVE[day.getMonth()];
-
-      head.append(dayText, month);
-      dayCard.append(head);
-
-      const list = document.createElement("div");
-      list.className = "hearing-list";
-
-      const hearings = getHearingsForDay(day);
-      if (hearings.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "empty-day";
-        empty.textContent = hasActiveFilters() ? "Nema rezultata" : "Nema ročišta";
-        list.append(empty);
-      } else {
-        hearings.forEach((hearing) => list.append(createHearingButton(hearing)));
-      }
-
-      dayCard.append(list);
-      els.calendarGrid.append(dayCard);
+      const hearings = visibleHearings.filter((hearing) => isSameDay(new Date(hearing.hearingDateTime), day));
+      els.calendarGrid.append(createDayCard(day, hearings));
     });
   }
 
-  function createHearingButton(hearing) {
+  function createDayCard(day, hearings) {
+    const dayCard = document.createElement("article");
+    dayCard.className = "day-card";
+    dayCard.id = `day-${toDateKey(day)}`;
+    if (isSameDay(day, startOfToday)) dayCard.classList.add("today");
+    if (day < startOfToday) dayCard.classList.add("past-day");
+
+    const head = document.createElement("div");
+    head.className = "day-head";
+
+    const dayText = document.createElement("div");
+    dayText.innerHTML = `<div class="day-name">${DAY_NAMES[day.getDay()]}</div><div class="day-date">${day.getDate()}.</div>`;
+
+    const month = document.createElement("div");
+    month.className = "day-name";
+    month.textContent = MONTH_NAMES_NOMINATIVE[day.getMonth()];
+
+    head.append(dayText, month);
+    dayCard.append(head);
+
+    const list = document.createElement("div");
+    list.className = "hearing-list";
+    hearings.forEach((hearing) => list.append(createHearingButton(hearing, { markPast: state.scheduleView === "all" })));
+
+    dayCard.append(list);
+    return dayCard;
+  }
+
+  function createScheduleEmptyState() {
+    const viewConfig = SCHEDULE_VIEWS[state.scheduleView] || SCHEDULE_VIEWS.next30;
+    const empty = document.createElement("div");
+    empty.className = "schedule-empty";
+    empty.innerHTML = `
+      <strong>${escapeHtml(viewConfig.emptyTitle)}</strong>
+      <span>${escapeHtml(viewConfig.emptyText)}</span>
+    `;
+
+    const button = document.createElement("button");
+    button.className = "secondary-button";
+    button.type = "button";
+    button.textContent = "Dodaj novo ročište";
+    button.addEventListener("click", () => {
+      resetForm();
+      setMobileView("form");
+      render();
+      els.fields.plaintiff.focus();
+    });
+    empty.append(button);
+    return empty;
+  }
+
+  function createHearingButton(hearing, options = {}) {
+    const date = new Date(hearing.hearingDateTime);
+    const showPastBadge = Boolean(options.markPast && isPastHearing(hearing));
     const button = document.createElement("button");
     button.type = "button";
     button.className = "hearing-button";
     if (hearing.id === state.selectedId) button.classList.add("selected");
     if (isDeletedHearing(hearing)) button.classList.add("deleted");
+    if (showPastBadge) button.classList.add("past-hearing");
     button.classList.add(getStatusClass(hearing.status));
     button.innerHTML = `
-      <span class="hearing-time">${formatTime(new Date(hearing.hearingDateTime))}</span>
+      <span class="hearing-time">${formatTime(date)}</span>
       <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
       ${createStatusBadgeHtml(hearing.status)}
+      ${showPastBadge ? `<span class="past-badge">Prošlo</span>` : ""}
       ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
     `;
     button.addEventListener("click", () => {
@@ -1404,6 +1469,55 @@
       .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
   }
 
+  function getScheduleHearings() {
+    return getVisibleHearings()
+      .filter((hearing) => {
+        const date = new Date(hearing.hearingDateTime);
+        return !Number.isNaN(date.getTime()) && matchesScheduleView(date);
+      })
+      .sort(compareHearingsByDate);
+  }
+
+  function getScheduleDays(hearings) {
+    return getVisibleDaysWithHearings(hearings);
+  }
+
+  function getVisibleDaysWithHearings(hearings) {
+    const keys = new Set();
+    return hearings
+      .map((hearing) => stripTime(new Date(hearing.hearingDateTime)))
+      .filter((date) => {
+        const key = toDateKey(date);
+        if (keys.has(key)) return false;
+        keys.add(key);
+        return true;
+      })
+      .sort((a, b) => a - b);
+  }
+
+  function matchesScheduleView(date) {
+    if (state.scheduleView === "today") return isToday(date);
+    if (state.scheduleView === "week") return isThisWeek(date);
+    if (state.scheduleView === "next30") return isWithinNextDays(date, 30);
+    if (state.scheduleView === "custom") return date >= state.visibleStart && date <= state.visibleEnd;
+    return true;
+  }
+
+  function compareHearingsByDate(a, b) {
+    return new Date(a.hearingDateTime) - new Date(b.hearingDateTime);
+  }
+
+  function updateScheduleViewButtons() {
+    const todayCount = getVisibleHearings().filter((hearing) => isToday(new Date(hearing.hearingDateTime))).length;
+    els.scheduleViewButtons.forEach((button) => {
+      const isActive = button.dataset.scheduleView === state.scheduleView;
+      button.classList.toggle("active", isActive);
+      button.classList.toggle("has-items", button.dataset.scheduleView === "today" && todayCount > 0);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+    els.loadMoreWrap.hidden = state.scheduleView !== "custom";
+  }
+
   function getVisibleHearings() {
     return state.hearings.filter((hearing) => state.showDeleted || !isDeletedHearing(hearing));
   }
@@ -1597,6 +1711,7 @@
     if (!Number.isInteger(month) || !Number.isInteger(year)) return;
 
     const target = new Date(year, month, 1);
+    state.scheduleView = "custom";
     state.visibleStart = startOfMonth(target);
     state.visibleEnd = endOfMonth(addMonths(target, 18));
     render();
@@ -1606,11 +1721,21 @@
   }
 
   function scrollToToday() {
+    state.scheduleView = "today";
     state.visibleStart = weekStart;
     state.visibleEnd = getDefaultVisibleEnd();
     render();
     requestAnimationFrame(() => {
       document.getElementById(`day-${toDateKey(startOfToday)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  function setScheduleView(view) {
+    if (!SCHEDULE_VIEWS[view]) return;
+    state.scheduleView = view;
+    render();
+    requestAnimationFrame(() => {
+      els.calendarGrid.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -1638,6 +1763,24 @@
   }
 
   function updateRangeLabel() {
+    if (state.scheduleView === "today") {
+      els.rangeLabel.textContent = `Danas: ${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}.`;
+      return;
+    }
+    if (state.scheduleView === "week") {
+      const weekEnd = addDays(weekStart, 6);
+      els.rangeLabel.textContent = `Ovaj tjedan: ${formatShortDate(weekStart)} ${weekStart.getFullYear()}. - ${formatShortDate(weekEnd)} ${weekEnd.getFullYear()}.`;
+      return;
+    }
+    if (state.scheduleView === "next30") {
+      const end = addDays(startOfToday, 30);
+      els.rangeLabel.textContent = `Sljedećih 30 dana: ${formatShortDate(startOfToday)} ${startOfToday.getFullYear()}. - ${formatShortDate(end)} ${end.getFullYear()}.`;
+      return;
+    }
+    if (state.scheduleView === "all") {
+      els.rangeLabel.textContent = state.showDeleted ? "Sva ročišta, uključujući obrisane" : "Sva aktivna ročišta";
+      return;
+    }
     els.rangeLabel.textContent = `${formatShortDate(state.visibleStart)} ${state.visibleStart.getFullYear()}. - ${formatShortDate(state.visibleEnd)} ${state.visibleEnd.getFullYear()}.`;
   }
 
@@ -1760,6 +1903,25 @@
     return stripTime(parsed);
   }
 
+  function isToday(date) {
+    return isSameDay(date, startOfToday);
+  }
+
+  function isThisWeek(date) {
+    const day = stripTime(date);
+    return day >= weekStart && day <= addDays(weekStart, 6);
+  }
+
+  function isWithinNextDays(date, days) {
+    const day = stripTime(date);
+    return day >= startOfToday && day <= addDays(startOfToday, days);
+  }
+
+  function isPastHearing(hearing) {
+    const date = new Date(hearing.hearingDateTime);
+    return !Number.isNaN(date.getTime()) && date < new Date();
+  }
+
   function isSameDay(a, b) {
     return a.getFullYear() === b.getFullYear() &&
       a.getMonth() === b.getMonth() &&
@@ -1786,6 +1948,7 @@
   function normalizeSearch(value) {
     return String(value || "")
       .toLocaleLowerCase("hr-HR")
+      .replace(/[đð]/g, "d")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]/g, "");

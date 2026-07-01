@@ -376,6 +376,43 @@ select:focus-visible {
   padding: 16px;
 }
 
+.schedule-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 16px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.schedule-view-button {
+  position: relative;
+  min-height: 44px;
+  padding: 9px 10px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.schedule-view-button.active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.schedule-view-button.has-items:not(.active)::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .panel-heading {
   display: flex;
   align-items: flex-start;
@@ -694,6 +731,11 @@ select.invalid {
   background: #fff8f8;
 }
 
+.hearing-button.past-hearing {
+  border-left-color: #7d8885;
+  background: #f6f8f7;
+}
+
 .hearing-button.status-postponed,
 .search-result-button.status-postponed {
   border-left-color: #b26b23;
@@ -743,6 +785,17 @@ select.invalid {
 .deleted-badge {
   margin-top: 4px;
   padding: 3px 7px;
+}
+
+.past-badge {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #4d5b58;
+  background: #e7ecea;
+  font-size: 12px;
+  font-weight: 760;
 }
 
 .status-badge {
@@ -892,6 +945,27 @@ select.invalid {
   color: var(--accent-strong);
   font-size: 14px;
   font-weight: 780;
+}
+
+.schedule-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.schedule-empty strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.schedule-empty span {
+  font-size: 14px;
 }
 
 .load-more-wrap {
@@ -1202,6 +1276,15 @@ select.invalid {
   .details-panel,
   .schedule-panel {
     padding: 14px;
+  }
+
+  .schedule-view-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .schedule-view-button {
+    min-height: 46px;
+    font-size: 14px;
   }
 
   .calendar-grid {

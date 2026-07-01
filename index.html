@@ -200,9 +200,16 @@
           <div class="panel-heading schedule-heading">
             <div>
               <h2 id="scheduleTitle">Raspored ročišta</h2>
-              <p>Pregled po datumima, uz skok na mjesec i godinu.</p>
+              <p>Brzi pregledi radnog rasporeda, uz skok na mjesec i godinu.</p>
             </div>
             <div class="today-chip" id="todayChip"></div>
+          </div>
+
+          <div class="schedule-view-tabs" aria-label="Brzi vremenski pregledi">
+            <button class="schedule-view-button" type="button" data-schedule-view="today">Danas</button>
+            <button class="schedule-view-button" type="button" data-schedule-view="week">Ovaj tjedan</button>
+            <button class="schedule-view-button" type="button" data-schedule-view="next30">Sljedećih 30 dana</button>
+            <button class="schedule-view-button" type="button" data-schedule-view="all">Sve</button>
           </div>
 
           <div class="schedule-tools" aria-label="Pretraga i odabir razdoblja">

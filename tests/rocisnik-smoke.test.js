@@ -95,6 +95,13 @@ async function run() {
     assert.ok(await page.evaluate((key) => localStorage.getItem(key), SECURITY_NOTICE_ACCEPTED_AT_KEY));
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
+    await assertScheduleViewActive(page, "next30");
+    await assertVisibleText(page, ".schedule-empty", "Nema ročišta u sljedećih 30 dana.");
+    await page.click('[data-schedule-view="today"]');
+    await assertVisibleText(page, ".schedule-empty", "Nema ročišta danas.");
+    await page.click(".schedule-empty button");
+    await assertVisibleText(page, "#formTitle", "Dodaj ročište");
+    await page.click('[data-schedule-view="next30"]');
 
     assert.equal(await page.locator("#defaultReminderSelect").inputValue(), "1d");
     assert.equal(await page.locator("#reminder1d").isChecked(), true);
@@ -124,15 +131,22 @@ async function run() {
     assert.ok(Object.values(hearings[0].reminderEvents || {}).some((event) => event.dismissedAt));
 
     const today = startOfDay(new Date());
+    const yesterday = addDays(today, -1);
     const tomorrow = addDays(today, 1);
     const tenDaysFromToday = addDays(today, 10);
     const fortyDaysFromToday = addDays(today, 40);
+    await page.waitForFunction(() => document.querySelectorAll("#hearingStatus option").length >= 4);
+    const postponedStatusValue = await page.evaluate(() =>
+      document.querySelectorAll("#hearingStatus option")[1]?.value || "zakazano"
+    );
     const seededHearings = [
+      buildStoredHearing("date-filter-yesterday", yesterday, "Datum Jucer", "Test Osoba"),
       buildStoredHearing("date-filter-today", today, "Datum Danas", "Test Osoba"),
       buildStoredHearing("date-filter-tomorrow", tomorrow, "Datum Sutra", "Test Osoba"),
       buildStoredHearing("date-filter-ten-days", tenDaysFromToday, "Datum Deset", "Test Osoba"),
       buildStoredHearing("date-filter-forty-days", fortyDaysFromToday, "Datum Cetrdeset", "Test Osoba"),
       buildStoredHearing("date-filter-canceled", tomorrow, "Datum Otkazano", "Test Osoba", "otkazano"),
+      buildStoredHearing("date-filter-postponed", tomorrow, "Datum Odgodeno", "Test Osoba", postponedStatusValue),
       {
         ...buildStoredHearing("date-filter-deleted", tomorrow, "Datum Obrisano", "Test Osoba"),
         deletedAt: new Date().toISOString()
@@ -143,6 +157,36 @@ async function run() {
       localStorage.setItem(key, JSON.stringify([...existing, ...records]));
     }, { key: STORAGE_KEY, records: seededHearings });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await assertScheduleViewActive(page, "next30");
+    await assertScheduleIncludes(page, "Datum Danas");
+    await assertScheduleIncludes(page, "Datum Deset");
+    await assertScheduleIncludes(page, "Datum Otkazano");
+    await assertScheduleIncludes(page, "Odgođeno");
+    await assertScheduleExcludes(page, "Datum Jucer");
+    await assertScheduleExcludes(page, "Datum Cetrdeset");
+    await assertScheduleExcludes(page, "Datum Obrisano");
+
+    await page.click('[data-schedule-view="today"]');
+    await assertScheduleViewActive(page, "today");
+    await assertScheduleIncludes(page, "Datum Danas");
+    await assertScheduleExcludes(page, "Datum Sutra");
+
+    await page.click('[data-schedule-view="week"]');
+    await assertScheduleViewActive(page, "week");
+    await assertScheduleIncludes(page, "Datum Danas");
+    await assertScheduleExcludes(page, "Datum Cetrdeset");
+
+    await page.click('[data-schedule-view="next30"]');
+    await assertScheduleViewActive(page, "next30");
+    await assertScheduleIncludes(page, "Datum Deset");
+    await assertScheduleExcludes(page, "Datum Cetrdeset");
+
+    await page.click('[data-schedule-view="all"]');
+    await assertScheduleViewActive(page, "all");
+    await assertScheduleIncludes(page, "Datum Jucer");
+    await assertScheduleIncludes(page, "Datum Cetrdeset");
+    await assertScheduleIncludes(page, "Prošlo");
+    await assertScheduleExcludes(page, "Datum Obrisano");
 
     await page.fill("#filterDateFrom", toDateKey(today));
     await page.fill("#filterDateTo", toDateKey(tomorrow));
@@ -266,6 +310,9 @@ async function run() {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator(".mobile-tabs").isVisible(), true);
+    await page.click('[data-mobile-view="schedule"]');
+    assert.equal(await page.locator('[data-schedule-view="today"]').isVisible(), true);
+    assert.equal(await page.locator('[data-schedule-view="next30"]').isVisible(), true);
     await page.click('[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
@@ -342,6 +389,20 @@ async function assertSearchIncludes(page, expectedText) {
 async function assertSearchExcludes(page, unexpectedText) {
   const text = await page.locator("#searchResults").innerText();
   assert.equal(text.includes(unexpectedText), false, `Search results should not contain "${unexpectedText}", got "${text}"`);
+}
+
+async function assertScheduleViewActive(page, view) {
+  assert.equal(await page.locator(`[data-schedule-view="${view}"]`).getAttribute("aria-pressed"), "true");
+}
+
+async function assertScheduleIncludes(page, expectedText) {
+  const text = await page.locator("#calendarGrid").innerText();
+  assert.ok(text.includes(expectedText), `Schedule should contain "${expectedText}", got "${text}"`);
+}
+
+async function assertScheduleExcludes(page, unexpectedText) {
+  const text = await page.locator("#calendarGrid").innerText();
+  assert.equal(text.includes(unexpectedText), false, `Schedule should not contain "${unexpectedText}", got "${text}"`);
 }
 
 run().catch((error) => {
