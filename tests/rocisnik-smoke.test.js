@@ -230,6 +230,16 @@ async function run() {
     assert.equal(desktopLayout.reminderTabHasSvgIcon, true);
     assert.equal(desktopLayout.backupButtonsHaveIcons, true);
 
+    await page.click("#dismissDataNoticeButton");
+    assert.equal(await page.locator("#dataNotice").isVisible(), true);
+    assert.equal(await page.locator("#dataNotice .data-storage-note").isVisible(), false);
+    assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), false);
+    await assertVisibleText(page, "#dataNotice", "Izvezi JSON");
+    await assertVisibleText(page, "#dataNotice", "Uvezi JSON");
+    await page.click("#dataSafetyButton");
+    await assertVisibleText(page, "#dataNotice .data-storage-note", "Podaci se čuvaju samo");
+    assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), true);
+
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
       deletedAt: new Date().toISOString()

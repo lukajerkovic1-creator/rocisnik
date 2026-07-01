@@ -928,6 +928,11 @@ select:focus-visible {
   margin: 0;
 }
 
+.data-notice.storage-note-dismissed .data-storage-note,
+.data-notice.storage-note-dismissed .notice-close {
+  display: none;
+}
+
 .schedule-view-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2096,8 +2101,8 @@ select.invalid {
   }
 
   .side-column .details-panel {
-    padding: 13px 16px;
-    max-height: 390px;
+    padding: 12px 16px;
+    max-height: 376px;
   }
 
   .side-column .details-panel .panel-heading {
@@ -2114,7 +2119,7 @@ select.invalid {
   }
 
   .side-column .case-title {
-    padding-bottom: 8px;
+    padding-bottom: 6px;
   }
 
   .side-column .case-title span {
@@ -2127,26 +2132,26 @@ select.invalid {
   }
 
   .side-column .case-title p {
-    margin-top: 5px;
+    margin-top: 4px;
     font-size: 12px;
   }
 
   .side-column .detail-actions {
-    gap: 7px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 7px;
   }
 
   .side-column .detail-actions .secondary-button,
   .side-column .detail-actions .danger-button,
   .side-column .detail-actions .ghost-button {
-    min-height: 31px;
-    padding: 0 11px;
+    min-height: 29px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
   .side-column .details-list {
     gap: 0;
-    margin-top: 8px;
+    margin-top: 7px;
   }
 
   .side-column .detail-case-number,
@@ -2157,8 +2162,8 @@ select.invalid {
   .side-column .details-list div {
     grid-template-columns: 18px 88px minmax(0, 1fr);
     align-items: start;
-    gap: 7px;
-    padding: 5px 0;
+    gap: 6px;
+    padding: 4px 0;
   }
 
   .side-column .details-list div::before {
@@ -2200,7 +2205,7 @@ select.invalid {
   .side-column .detail-record-id-row {
     grid-template-columns: auto minmax(0, 1fr) !important;
     gap: 4px !important;
-    padding-top: 6px;
+    padding-top: 4px;
     color: var(--muted);
   }
 
@@ -2255,7 +2260,7 @@ select.invalid {
 
   .side-column .data-notice {
     position: relative;
-    padding: 10px 14px;
+    padding: 9px 13px;
   }
 
   .side-column .data-notice h2 {
@@ -2268,8 +2273,13 @@ select.invalid {
     line-height: 1.35;
   }
 
-  .side-column .data-notice-body > p:not(.backup-note):not(.backup-message) {
+  .side-column .data-notice-body > p:not(.data-storage-note):not(.backup-note):not(.backup-message) {
     display: none;
+  }
+
+  .side-column .data-storage-note {
+    margin-top: 4px;
+    padding-right: 28px;
   }
 
   .side-column .data-notice .notice-close {
@@ -2334,12 +2344,12 @@ select.invalid {
   }
 
   .side-column .backup-tools {
-    gap: 5px;
-    margin-top: 6px;
+    gap: 4px;
+    margin-top: 5px;
   }
 
   .side-column .backup-tools .compact-button {
-    min-height: 28px;
+    min-height: 27px;
     padding: 0 10px;
     font-size: 12px;
   }
@@ -2372,9 +2382,9 @@ select.invalid {
   }
 
   .side-column .backup-note {
-    margin-top: 5px !important;
+    margin-top: 4px !important;
     font-size: 11px !important;
-    line-height: 1.25;
+    line-height: 1.2;
   }
 
   .side-column .backup-message {

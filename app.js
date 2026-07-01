@@ -441,17 +441,19 @@
   }
 
   function syncDataNotice() {
-    els.dataNotice.hidden = window.localStorage.getItem(DATA_NOTICE_DISMISSED_KEY) === "true";
+    const dismissed = window.localStorage.getItem(DATA_NOTICE_DISMISSED_KEY) === "true";
+    els.dataNotice.hidden = false;
+    els.dataNotice.classList.toggle("storage-note-dismissed", dismissed);
   }
 
   function dismissDataNotice() {
     window.localStorage.setItem(DATA_NOTICE_DISMISSED_KEY, "true");
-    els.dataNotice.hidden = true;
+    syncDataNotice();
   }
 
   function showDataNotice() {
     window.localStorage.removeItem(DATA_NOTICE_DISMISSED_KEY);
-    els.dataNotice.hidden = false;
+    syncDataNotice();
     els.dataNotice.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
