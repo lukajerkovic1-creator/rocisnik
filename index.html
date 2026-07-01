@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=62">
+    <link rel="stylesheet" href="styles.css?v=63">
   </head>
   <body>
     <div class="app-shell">
@@ -408,6 +408,14 @@
               <span>Datum do</span>
               <input id="filterDateTo" type="date">
             </label>
+
+            <label>
+              <span>Prikaži obrisane</span>
+              <select id="filterDeleted">
+                <option value="no">Ne</option>
+                <option value="yes">Da</option>
+              </select>
+            </label>
           </div>
 
           <div class="date-presets" aria-label="Brzi datumski filteri">
@@ -647,6 +655,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=62"></script>
+    <script src="app.js?v=63"></script>
   </body>
 </html>

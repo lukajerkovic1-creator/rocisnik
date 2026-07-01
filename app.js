@@ -228,6 +228,7 @@
     scheduleViewButtons: Array.from(document.querySelectorAll("[data-schedule-view]")),
     scheduleTabButtons: Array.from(document.querySelectorAll(".schedule-view-button[data-schedule-view]")),
     showDeletedToggle: document.getElementById("showDeletedToggle"),
+    filterDeleted: document.getElementById("filterDeleted"),
     filters: {
       plaintiff: document.getElementById("filterPlaintiff"),
       defendant: document.getElementById("filterDefendant"),
@@ -385,10 +386,10 @@
     els.restoreButton.addEventListener("click", restoreSelected);
     els.moreDetailsButton.addEventListener("click", toggleHistoryPanel);
     els.showDeletedToggle.addEventListener("change", () => {
-      state.showDeleted = els.showDeletedToggle.checked;
-      const selected = state.hearings.find((hearing) => hearing.id === state.selectedId);
-      if (!state.showDeleted && isDeletedHearing(selected)) state.selectedId = null;
-      render();
+      setShowDeleted(els.showDeletedToggle.checked);
+    });
+    els.filterDeleted.addEventListener("change", () => {
+      setShowDeleted(els.filterDeleted.value === "yes");
     });
     els.jumpButton.addEventListener("click", jumpToSelectedMonth);
     els.todayButton.addEventListener("click", scrollToToday);
@@ -1802,6 +1803,7 @@
   function render() {
     updateRangeLabel();
     els.showDeletedToggle.checked = state.showDeleted;
+    els.filterDeleted.value = state.showDeleted ? "yes" : "no";
     els.scheduleTools.classList.toggle("open", state.scheduleToolsOpen);
     els.scheduleFilterButton.setAttribute("aria-expanded", state.scheduleToolsOpen ? "true" : "false");
     updateScheduleViewButtons();
@@ -1982,6 +1984,13 @@
   function showDeletedRecords() {
     state.showDeleted = true;
     setMobileView("schedule");
+    render();
+  }
+
+  function setShowDeleted(value) {
+    state.showDeleted = Boolean(value);
+    const selected = state.hearings.find((hearing) => hearing.id === state.selectedId);
+    if (!state.showDeleted && isDeletedHearing(selected)) state.selectedId = null;
     render();
   }
 
@@ -2576,6 +2585,9 @@
       state.filters[key] = "";
       els.filters[key].value = "";
     });
+    state.showDeleted = false;
+    const selected = state.hearings.find((hearing) => hearing.id === state.selectedId);
+    if (isDeletedHearing(selected)) state.selectedId = null;
     state.searchError = "";
     state.showAllSearchResults = Boolean(options.showAll);
     state.searchSubmitted = Boolean(options.showAll);

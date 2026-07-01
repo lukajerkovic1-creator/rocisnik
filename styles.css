@@ -2059,7 +2059,7 @@ select.invalid {
 
   .search-grid {
     order: 1;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px 12px;
   }
 

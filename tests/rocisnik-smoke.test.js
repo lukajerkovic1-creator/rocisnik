@@ -128,6 +128,7 @@ async function run() {
     await assertVisibleText(page, ".search-panel .utility-tabs", "Pretraživanje");
     await assertVisibleText(page, ".search-panel .utility-tabs", "Novo ročište");
     await assertVisibleText(page, ".search-panel .utility-tabs", "Podsjetnici");
+    await assertVisibleText(page, ".search-grid", "Prikaži obrisane");
     const desktopLayout = await page.evaluate(() => {
       const utilityTabs = document.querySelector(".search-panel .utility-tabs")?.getBoundingClientRect();
       const searchPanel = document.querySelector(".search-panel")?.getBoundingClientRect();
@@ -466,14 +467,16 @@ async function run() {
     await assertSearchIncludes(page, "Datum Otkazano");
     await assertSearchExcludes(page, "Datum Sutra");
 
-    await page.click("#scheduleFilterButton");
-    await page.check("#showDeletedToggle");
     await page.click("#clearFiltersButton");
+    assert.equal(await page.locator("#filterDeleted").inputValue(), "no");
     await page.fill("#filterDateFrom", toDateKey(tomorrow));
     await page.fill("#filterDateTo", toDateKey(tomorrow));
+    await page.selectOption("#filterDeleted", "yes");
+    assert.equal(await page.locator("#showDeletedToggle").isChecked(), true);
     await page.click("#searchButton");
     await assertSearchIncludes(page, "Datum Obrisano");
-    await page.uncheck("#showDeletedToggle");
+    await page.selectOption("#filterDeleted", "no");
+    assert.equal(await page.locator("#showDeletedToggle").isChecked(), false);
 
     await page.click("#clearFiltersButton");
     await page.fill("#filterPlaintiff", "Ne postoji");
@@ -535,7 +538,8 @@ async function run() {
     assert.ok(hearings[0].history.some((event) => event.eventType === "deleted"));
     assert.equal(await page.locator("#detailsContent").isHidden(), true);
 
-    await page.check("#showDeletedToggle");
+    await page.selectOption("#filterDeleted", "yes");
+    assert.equal(await page.locator("#showDeletedToggle").isChecked(), true);
     await page.click(".hearing-button.deleted");
     await assertVisibleText(page, "#deletedStatus", "Obrisano");
     await openHistoryPanel(page);
@@ -546,7 +550,7 @@ async function run() {
     assert.ok(hearings[0].history.some((event) => event.eventType === "restored"));
 
     await page.evaluate((key) => localStorage.removeItem(key), LAST_BACKUP_AT_KEY);
-    await page.uncheck("#showDeletedToggle");
+    await page.selectOption("#filterDeleted", "no");
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
 
@@ -701,6 +705,7 @@ async function run() {
     await page.click('[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
+    assert.equal(await page.locator("#filterDeleted").isVisible(), true);
     assert.equal(await page.locator("#filterDateFrom").isVisible(), true);
     assert.equal(await page.locator('[data-date-preset="next-30"]').isVisible(), true);
 
