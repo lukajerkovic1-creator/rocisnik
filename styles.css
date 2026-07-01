@@ -1945,6 +1945,12 @@ select.invalid {
 
   .side-column .detail-reminders-row {
     --detail-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9'/%3E%3Cpath d='M13.73 21a2 2 0 0 1-3.46 0'/%3E%3C/svg%3E");
+    display: none !important;
+  }
+
+  .side-column .detail-plaintiff-row,
+  .side-column .detail-defendant-row {
+    --detail-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21a8 8 0 0 0-16 0'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
   }
 
   .side-column .detail-subject-row {
@@ -2002,9 +2008,26 @@ select.invalid {
     position: absolute;
     top: 12px;
     right: 12px;
+    width: 28px;
+    min-width: 28px;
     min-height: 28px;
-    padding: 0 9px;
-    font-size: 11px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #667572;
+    font-size: 0;
+  }
+
+  .side-column .data-notice .notice-close::before {
+    content: "×";
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .side-column .data-notice .notice-close:hover {
+    border-color: var(--border-strong);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
   }
 
   .side-column .backup-metadata {
@@ -2044,14 +2067,20 @@ select.invalid {
   }
 
   .side-column .import-options summary {
-    min-height: 34px;
-    padding: 0 10px;
-    font-size: 12px;
+    min-height: 24px;
+    padding: 0;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .side-column .import-options {
+    border: 0;
+    background: transparent;
   }
 
   .side-column .import-mode {
     gap: 6px;
-    padding: 8px;
+    padding: 7px 0 0;
   }
 
   .side-column .backup-note {

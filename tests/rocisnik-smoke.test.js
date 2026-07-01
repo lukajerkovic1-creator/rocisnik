@@ -136,6 +136,8 @@ async function run() {
       const next30Tab = document.querySelector('.schedule-view-tabs [data-schedule-view="next30"]')?.getBoundingClientRect();
       const quickSearchStyle = getComputedStyle(document.querySelector("#scheduleQuickSearch"));
       const filterIconStyle = getComputedStyle(document.querySelector("#scheduleFilterButton"), "::before");
+      const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
+      const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
@@ -147,7 +149,9 @@ async function run() {
         quickSearchHasIcon: quickSearchStyle.backgroundImage.includes("data:image/svg+xml")
           && Number.parseFloat(quickSearchStyle.paddingLeft) >= 34,
         filterButtonHasIcon: filterIconStyle.content === '""'
-          && filterIconStyle.maskImage !== "none"
+          && filterIconStyle.maskImage !== "none",
+        backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
+        importSummaryIsSubtle: importSummary ? importSummary.height <= 28 : false
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
@@ -157,6 +161,8 @@ async function run() {
     assert.equal(desktopLayout.next30TabSingleLine, true);
     assert.equal(desktopLayout.quickSearchHasIcon, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
+    assert.equal(desktopLayout.backupCloseIsCompact, true);
+    assert.equal(desktopLayout.importSummaryIsSubtle, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
@@ -380,6 +386,8 @@ async function run() {
     await assertVisibleText(page, "#detailsHeaderStatus", "Zakazano");
     await assertVisibleText(page, "#moreDetailsButton", "Više");
     await assertVisibleText(page, "#detailsCaseParties", "Croatia osiguranje - Marko Markovic");
+    await assertVisibleText(page, "#detailsPlaintiff", "Croatia osiguranje");
+    await assertVisibleText(page, "#detailsDefendant", "Marko Markovic");
     assert.equal(await page.locator(".side-column .details-panel").evaluate((element) => element.scrollHeight <= element.clientHeight + 1), true);
     assert.equal(await page.locator(".side-column .detail-date-row").evaluate((element) => {
       const iconStyle = getComputedStyle(element, "::before");

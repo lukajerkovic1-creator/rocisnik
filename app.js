@@ -276,6 +276,8 @@
     detailsCaseParties: document.getElementById("detailsCaseParties"),
     detailsCaseNumber: document.getElementById("detailsCaseNumber"),
     detailsDateTime: document.getElementById("detailsDateTime"),
+    detailsPlaintiff: document.getElementById("detailsPlaintiff"),
+    detailsDefendant: document.getElementById("detailsDefendant"),
     detailsStatus: document.getElementById("detailsStatus"),
     detailsReminders: document.getElementById("detailsReminders"),
     detailsDisputeSubject: document.getElementById("detailsDisputeSubject"),
@@ -2124,6 +2126,8 @@
     els.detailsCaseParties.textContent = `${hearing.plaintiff} - ${hearing.defendant}`;
     els.detailsCaseNumber.textContent = hearing.caseNumber;
     els.detailsDateTime.textContent = formatLongDateTime(date);
+    els.detailsPlaintiff.textContent = hearing.plaintiff;
+    els.detailsDefendant.textContent = hearing.defendant;
     els.detailsStatus.replaceChildren(createStatusBadge(hearing.status));
     els.detailsReminders.textContent = getReminderSummary(hearing);
     els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
