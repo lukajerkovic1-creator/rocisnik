@@ -123,6 +123,7 @@
     visibleEnd: null,
     showDeleted: false,
     searchSubmitted: false,
+    searchTouched: false,
     searchError: "",
     showAllSearchResults: false,
     activeReminders: [],
@@ -2091,6 +2092,7 @@
     }
 
     if (!state.searchSubmitted) {
+      if (!state.searchTouched) return;
       const hint = document.createElement("div");
       hint.className = "search-empty";
       hint.textContent = "Upiši kriterij i pritisni Pretraži.";
@@ -2602,6 +2604,7 @@
     state.searchError = "";
     state.showAllSearchResults = Boolean(options.showAll);
     state.searchSubmitted = Boolean(options.showAll);
+    state.searchTouched = true;
     render();
   }
 
@@ -2620,6 +2623,7 @@
     state.searchError = validateSearchDateRange();
     state.showAllSearchResults = false;
     state.searchSubmitted = true;
+    state.searchTouched = true;
     render();
     requestAnimationFrame(() => {
       els.searchResults.scrollIntoView({ behavior: "smooth", block: "start" });
