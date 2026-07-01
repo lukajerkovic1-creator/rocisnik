@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=61">
+    <link rel="stylesheet" href="styles.css?v=62">
   </head>
   <body>
     <div class="app-shell">
@@ -530,10 +530,11 @@
               <button class="secondary-button compact-button" type="button" id="exportJsonButton">Izvezi JSON</button>
               <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
               <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
-              <div class="import-controls">
-                <details class="import-options">
-                  <summary>Način uvoza</summary>
+              <details class="import-options">
+                <summary>Dodatne opcije</summary>
+                <div class="import-controls">
                   <fieldset class="import-mode" aria-label="Način uvoza">
+                    <legend>Način uvoza</legend>
                     <label>
                       <input type="radio" name="importMode" value="append" checked>
                       <span>Dodaj u postojeće podatke</span>
@@ -543,11 +544,11 @@
                       <span>Zamijeni postojeće podatke</span>
                     </label>
                   </fieldset>
-                </details>
-                <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
-                <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
-                <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
-              </div>
+                  <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
+                </div>
+              </details>
+              <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
+              <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
             </div>
             <p class="backup-note">JSON backup može sadržavati osjetljive podatke. Šifrirani backup je sigurnija opcija.</p>
             <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
@@ -646,6 +647,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=61"></script>
+    <script src="app.js?v=62"></script>
   </body>
 </html>

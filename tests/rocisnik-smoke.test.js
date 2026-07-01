@@ -236,6 +236,8 @@ async function run() {
     assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), false);
     await assertVisibleText(page, "#dataNotice", "Izvezi JSON");
     await assertVisibleText(page, "#dataNotice", "Uvezi JSON");
+    await assertVisibleText(page, ".side-column .import-options summary", "Dodatne opcije");
+    assert.equal(await page.locator("#importEncryptedButton").isVisible(), false);
     await page.click("#dataSafetyButton");
     await assertVisibleText(page, "#dataNotice .data-storage-note", "Podaci se čuvaju samo");
     assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), true);

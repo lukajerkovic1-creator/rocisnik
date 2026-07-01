@@ -424,6 +424,13 @@ select:focus-visible {
   border: 0;
 }
 
+.import-mode legend {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
 .import-mode label {
   display: flex;
   align-items: center;
@@ -459,6 +466,10 @@ select:focus-visible {
 }
 
 .import-options .import-mode {
+  padding: 0 10px 8px;
+}
+
+.import-options .import-controls {
   padding: 0 10px 8px;
 }
 
@@ -2355,7 +2366,7 @@ select.invalid {
   }
 
   .side-column .import-options summary {
-    min-height: 28px;
+    min-height: 26px;
     padding: 0 8px;
     border: 1px solid var(--border);
     border-radius: 7px;
@@ -2365,10 +2376,10 @@ select.invalid {
 
   .side-column .import-controls {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: 1fr;
     align-items: stretch;
     gap: 6px;
-    padding: 0;
+    padding: 6px 0 0;
   }
 
   .side-column .import-options {
@@ -2378,7 +2389,17 @@ select.invalid {
 
   .side-column .import-mode {
     gap: 6px;
-    padding: 7px 0 0;
+    padding: 0;
+  }
+
+  .side-column .import-mode legend {
+    margin-bottom: 2px;
+    font-size: 10px;
+  }
+
+  .side-column .import-mode label {
+    min-height: 24px;
+    font-size: 11px;
   }
 
   .side-column .backup-note {
