@@ -283,6 +283,7 @@
     detailsDisputeSubject: document.getElementById("detailsDisputeSubject"),
     detailsDisputeValue: document.getElementById("detailsDisputeValue"),
     detailsSpecificity: document.getElementById("detailsSpecificity"),
+    detailsRecordId: document.getElementById("detailsRecordId"),
     historyPanel: document.getElementById("historyPanel"),
     historyCount: document.getElementById("historyCount"),
     detailsHistory: document.getElementById("detailsHistory"),
@@ -2133,6 +2134,7 @@
     els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
     els.detailsDisputeValue.textContent = hearing.disputeValue || "Nije uneseno";
     els.detailsSpecificity.textContent = hearing.specificity || "Nije uneseno";
+    els.detailsRecordId.textContent = hearing.id || "Nije dostupno";
     renderHistory(hearing);
 
     const deleted = isDeletedHearing(hearing);

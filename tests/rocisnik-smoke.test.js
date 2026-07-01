@@ -477,6 +477,7 @@ async function run() {
     await assertVisibleText(page, "#detailsCaseParties", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#detailsPlaintiff", "Croatia osiguranje");
     await assertVisibleText(page, "#detailsDefendant", "Marko Markovic");
+    await assertVisibleText(page, "#detailsRecordId", hearings[0].id);
     assert.equal(await page.locator(".side-column .details-panel").evaluate((element) => element.scrollHeight <= element.clientHeight + 1), true);
     assert.equal(await page.locator(".side-column .backup-note").evaluate((element) => {
       const rect = element.getBoundingClientRect();
