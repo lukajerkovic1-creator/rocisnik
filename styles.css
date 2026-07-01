@@ -568,21 +568,20 @@ select:focus-visible {
 .topbar-action-icon {
   display: inline-grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  color: #52625f;
-  background: #f2f6f5;
+  width: 18px;
+  height: 18px;
+  color: #5b6966;
+  background: transparent;
 }
 
 .topbar-action-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.8;
+  stroke-width: 2;
 }
 
 #dataSafetyButton::before {
