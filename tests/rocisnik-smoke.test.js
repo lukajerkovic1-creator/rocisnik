@@ -257,6 +257,28 @@ async function run() {
     assert.equal(desktopLayout.reminderTabHasSvgIcon, true);
     assert.equal(desktopLayout.backupButtonsHaveIcons, true);
 
+    await page.setViewportSize({ width: 1213, height: 816 });
+    const referenceViewportLayout = await page.evaluate(() => {
+      const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
+      const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
+      const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
+      const footer = document.querySelector(".app-footer")?.getBoundingClientRect();
+      const allTab = document.querySelector('.schedule-view-tabs [data-schedule-view="all"]')?.getBoundingClientRect();
+      return {
+        noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+        scheduleTabsDoNotOverlapDatebar: scheduleTabs && scheduleDatebar ? scheduleTabs.right <= scheduleDatebar.left : false,
+        searchActionsInReferenceViewport: searchActions ? searchActions.bottom <= window.innerHeight : false,
+        footerStartsInReferenceViewport: footer ? footer.top < window.innerHeight : false,
+        allTabReadable: allTab ? allTab.width >= 58 : false
+      };
+    });
+    assert.equal(referenceViewportLayout.noHorizontalScroll, true);
+    assert.equal(referenceViewportLayout.scheduleTabsDoNotOverlapDatebar, true);
+    assert.equal(referenceViewportLayout.searchActionsInReferenceViewport, true);
+    assert.equal(referenceViewportLayout.footerStartsInReferenceViewport, true);
+    assert.equal(referenceViewportLayout.allTabReadable, true);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
     await page.click("#dismissDataNoticeButton");
     assert.equal(await page.locator("#dataNotice").isVisible(), true);
     assert.equal(await page.locator("#dataNotice .data-storage-note").isVisible(), false);
