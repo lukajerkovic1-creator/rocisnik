@@ -136,7 +136,9 @@ async function run() {
       const searchPanel = document.querySelector(".search-panel")?.getBoundingClientRect();
       const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
+      const dateLabel = document.querySelector(".schedule-date-label")?.getBoundingClientRect();
       const next30Tab = document.querySelector('.schedule-view-tabs [data-schedule-view="next30"]')?.getBoundingClientRect();
+      const dateLabelIconStyle = getComputedStyle(document.querySelector(".schedule-date-label"), "::before");
       const overviewCardStyle = getComputedStyle(document.querySelector(".overview-card"));
       const activeOverviewCardStyle = getComputedStyle(document.querySelector(".overview-card.active"));
       const quickSearchStyle = getComputedStyle(document.querySelector("#scheduleQuickSearch"));
@@ -181,6 +183,10 @@ async function run() {
         scheduleTabsShareRowWithDatebar: scheduleTabs && scheduleDatebar
           ? Math.abs(scheduleTabs.top - scheduleDatebar.top) <= 2
           : false,
+        dateLabelHasCalendarIcon: dateLabelIconStyle.content === '""'
+          && dateLabelIconStyle.maskImage !== "none"
+          && Number.parseFloat(dateLabelIconStyle.width) >= 14,
+        dateLabelSingleLine: dateLabel ? dateLabel.height <= 34 : false,
         next30TabSingleLine: next30Tab ? next30Tab.height <= 40 : false,
         overviewCardsHaveNoHeavySideAccent: Number.parseFloat(overviewCardStyle.borderLeftWidth) <= 1,
         activeOverviewCardStaysNeutral: activeOverviewCardStyle.borderTopColor === overviewCardStyle.borderTopColor
@@ -217,6 +223,8 @@ async function run() {
     assert.equal(desktopLayout.utilityTabsInFirstViewport, true);
     assert.equal(desktopLayout.searchPanelStartsInFirstViewport, true);
     assert.equal(desktopLayout.scheduleTabsShareRowWithDatebar, true);
+    assert.equal(desktopLayout.dateLabelHasCalendarIcon, true);
+    assert.equal(desktopLayout.dateLabelSingleLine, true);
     assert.equal(desktopLayout.next30TabSingleLine, true);
     assert.equal(desktopLayout.overviewCardsHaveNoHeavySideAccent, true);
     assert.equal(desktopLayout.activeOverviewCardStaysNeutral, true);
