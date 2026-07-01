@@ -1863,6 +1863,73 @@ select.invalid {
 }
 
 @media (min-width: 761px) {
+  .search-panel > .panel-heading {
+    display: none;
+  }
+
+  .search-panel.mobile-view {
+    display: grid;
+    padding-top: 0;
+  }
+
+  .search-panel .utility-tabs {
+    order: 0;
+  }
+
+  .search-grid {
+    order: 1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px 12px;
+  }
+
+  .search-panel label {
+    gap: 5px;
+  }
+
+  .search-panel label span {
+    font-size: 11px;
+  }
+
+  .search-panel input,
+  .search-panel select {
+    min-height: 34px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .search-actions {
+    order: 2;
+    grid-template-columns: minmax(160px, 240px) minmax(150px, 200px);
+    margin-top: 10px;
+  }
+
+  .search-actions .primary-button,
+  .search-actions .ghost-button {
+    min-height: 36px;
+    font-size: 12px;
+  }
+
+  .date-presets {
+    order: 3;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .date-presets .compact-button {
+    min-height: 30px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .search-results {
+    order: 5;
+    margin-top: 12px;
+  }
+
+  .search-message {
+    order: 4;
+  }
+
   .side-column .details-panel {
     padding: 13px 16px;
     max-height: 390px;

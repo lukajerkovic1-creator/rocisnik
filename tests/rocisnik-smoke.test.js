@@ -138,6 +138,9 @@ async function run() {
       const filterIconStyle = getComputedStyle(document.querySelector("#scheduleFilterButton"), "::before");
       const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
       const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
+      const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
+      const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
+      const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
@@ -151,7 +154,11 @@ async function run() {
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
-        importSummaryIsSubtle: importSummary ? importSummary.height <= 28 : false
+        importSummaryIsSubtle: importSummary ? importSummary.height <= 28 : false,
+        searchHeadingHiddenOnDesktop: searchHeading ? searchHeading.height === 0 : false,
+        datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
+        searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
+        searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
@@ -163,6 +170,10 @@ async function run() {
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
     assert.equal(desktopLayout.importSummaryIsSubtle, true);
+    assert.equal(desktopLayout.searchHeadingHiddenOnDesktop, true);
+    assert.equal(desktopLayout.datePresetsCompact, true);
+    assert.equal(desktopLayout.searchActionsBeforePresets, true);
+    assert.equal(desktopLayout.searchActionsInFirstViewport, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
