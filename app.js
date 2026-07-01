@@ -168,6 +168,9 @@
     enableNotificationsButton: document.getElementById("enableNotificationsButton"),
     notificationStatus: document.getElementById("notificationStatus"),
     remindersList: document.getElementById("remindersList"),
+    remindersPanel: document.querySelector(".reminders-panel"),
+    utilityButtons: Array.from(document.querySelectorAll("[data-utility-view]")),
+    utilityReminderCount: document.getElementById("utilityReminderCount"),
     exportJsonButton: document.getElementById("exportJsonButton"),
     exportEncryptedButton: document.getElementById("exportEncryptedButton"),
     importJsonButton: document.getElementById("importJsonButton"),
@@ -409,6 +412,9 @@
     els.clearFiltersButton.addEventListener("click", clearFilters);
     els.mobileTabs.forEach((tab) => {
       tab.addEventListener("click", () => setMobileView(tab.dataset.mobileView));
+    });
+    els.utilityButtons.forEach((button) => {
+      button.addEventListener("click", () => openUtilityView(button.dataset.utilityView));
     });
 
     setDefaultDateTime();
@@ -1267,6 +1273,31 @@
     state.activeReminders.forEach((item) => els.remindersList.append(createReminderItem(item)));
   }
 
+  function updateUtilityTabs() {
+    const activeView = state.currentMobileView === "form" ? "form" : "search";
+    els.utilityButtons.forEach((button) => {
+      const isActive = button.dataset.utilityView === activeView;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-current", isActive ? "page" : "false");
+    });
+    els.utilityReminderCount.textContent = String(state.activeReminders.length);
+  }
+
+  function openUtilityView(view) {
+    if (view === "form") {
+      goToNewHearing();
+      return;
+    }
+    if (view === "reminders") {
+      els.remindersPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      els.enableNotificationsButton.focus({ preventScroll: true });
+      return;
+    }
+    setMobileView("search");
+    render();
+    els.filters.plaintiff.focus();
+  }
+
   function createReminderItem(item) {
     const wrapper = document.createElement("article");
     wrapper.className = "reminder-item";
@@ -1755,6 +1786,7 @@
     renderBackupMetadata();
     renderBackupReminder();
     renderReminders();
+    updateUtilityTabs();
     renderCalendar();
     renderSearchResults();
     renderDetails();

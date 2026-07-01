@@ -121,6 +121,9 @@ async function run() {
     await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
     await assertVisibleText(page, ".schedule-empty", "Dodajte prvo ročište kako biste počeli voditi osobni raspored.");
     await assertVisibleText(page, ".schedule-empty", "Dodaj prvo ročište");
+    await assertVisibleText(page, ".utility-tabs", "Pretraživanje");
+    await assertVisibleText(page, ".utility-tabs", "Novo ročište");
+    await assertVisibleText(page, ".utility-tabs", "Podsjetnici");
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
@@ -181,6 +184,7 @@ async function run() {
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
     await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#remindersList", "2 sata prije");
+    await assertVisibleText(page, "#utilityReminderCount", "1");
 
     await page.click('[data-reminder-action="seen"]');
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");

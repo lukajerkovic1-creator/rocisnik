@@ -790,9 +790,59 @@ select:focus-visible {
   justify-self: stretch;
 }
 
+.utility-tabs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: -6px -6px 16px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.utility-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: #52625f;
+  background: transparent;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.utility-tab.active {
+  color: var(--accent-strong);
+}
+
+.utility-tab.active::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 2px;
+  border-radius: 999px 999px 0 0;
+  background: var(--accent);
+}
+
+.utility-tab strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: #566762;
+  background: #eef3f1;
+  font-size: 12px;
+}
+
 .schedule-panel {
   grid-area: schedule;
-  padding: 16px;
+  padding: 14px;
 }
 
 .side-column {
@@ -876,7 +926,7 @@ select:focus-visible {
 
 .schedule-date-label {
   width: 100%;
-  min-height: 38px;
+  min-height: 36px;
   display: grid;
   place-items: center;
   padding: 0 14px;
@@ -891,8 +941,8 @@ select:focus-visible {
 .icon-button {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  min-height: 38px;
+  width: 36px;
+  min-height: 36px;
   border: 1px solid var(--border);
   color: #465653;
   background: #fff;
@@ -919,7 +969,7 @@ select:focus-visible {
 .quick-search-label input,
 .sort-label select {
   width: 100%;
-  min-height: 40px;
+  min-height: 38px;
   border-radius: 7px;
 }
 
@@ -1461,8 +1511,8 @@ select.invalid {
   gap: 12px;
   align-items: center;
   width: 100%;
-  min-height: 70px;
-  padding: 10px 14px;
+  min-height: 58px;
+  padding: 8px 14px;
   border: 0;
   border-top: 1px solid var(--border);
   border-left: 4px solid var(--accent);
@@ -1487,7 +1537,7 @@ select.invalid {
 
 .hearing-time {
   color: var(--accent-strong);
-  font-size: 21px;
+  font-size: 20px;
   line-height: 1.05;
   font-weight: 820;
 }
@@ -2156,6 +2206,10 @@ select.invalid {
   .schedule-searchbar,
   .schedule-tools {
     grid-template-columns: 1fr;
+  }
+
+  .utility-tabs {
+    display: none;
   }
 
   .calendar-grid {

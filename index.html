@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=33">
+    <link rel="stylesheet" href="styles.css?v=35">
   </head>
   <body>
     <div class="app-shell">
@@ -331,6 +331,16 @@
         </section>
 
         <section class="search-panel mobile-view" data-view="search" aria-labelledby="searchTitle">
+          <div class="utility-tabs" aria-label="Radni paneli">
+            <button class="utility-tab active" type="button" data-utility-view="search">Pretraživanje</button>
+            <button class="utility-tab" type="button" data-utility-view="form">Novo ročište</button>
+            <button class="utility-tab" type="button" data-utility-view="reminders">
+              <span aria-hidden="true">♢</span>
+              Podsjetnici
+              <strong id="utilityReminderCount">0</strong>
+            </button>
+          </div>
+
           <div class="panel-heading">
             <div>
               <h2 id="searchTitle">Pretraži rasprave</h2>
@@ -602,6 +612,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=33"></script>
+    <script src="app.js?v=35"></script>
   </body>
 </html>
