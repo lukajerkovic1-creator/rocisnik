@@ -123,6 +123,100 @@ async function run() {
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.ok(Object.values(hearings[0].reminderEvents || {}).some((event) => event.dismissedAt));
 
+    const today = startOfDay(new Date());
+    const tomorrow = addDays(today, 1);
+    const tenDaysFromToday = addDays(today, 10);
+    const fortyDaysFromToday = addDays(today, 40);
+    const seededHearings = [
+      buildStoredHearing("date-filter-today", today, "Datum Danas", "Test Osoba"),
+      buildStoredHearing("date-filter-tomorrow", tomorrow, "Datum Sutra", "Test Osoba"),
+      buildStoredHearing("date-filter-ten-days", tenDaysFromToday, "Datum Deset", "Test Osoba"),
+      buildStoredHearing("date-filter-forty-days", fortyDaysFromToday, "Datum Cetrdeset", "Test Osoba"),
+      buildStoredHearing("date-filter-canceled", tomorrow, "Datum Otkazano", "Test Osoba", "otkazano"),
+      {
+        ...buildStoredHearing("date-filter-deleted", tomorrow, "Datum Obrisano", "Test Osoba"),
+        deletedAt: new Date().toISOString()
+      }
+    ];
+    await page.evaluate(({ key, records }) => {
+      const existing = JSON.parse(localStorage.getItem(key) || "[]");
+      localStorage.setItem(key, JSON.stringify([...existing, ...records]));
+    }, { key: STORAGE_KEY, records: seededHearings });
+    await page.reload({ waitUntil: "domcontentloaded" });
+
+    await page.fill("#filterDateFrom", toDateKey(today));
+    await page.fill("#filterDateTo", toDateKey(tomorrow));
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Danas");
+    await assertSearchIncludes(page, "Datum Sutra");
+    await assertSearchExcludes(page, "Datum Deset");
+    await assertSearchExcludes(page, "Datum Obrisano");
+
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterDateFrom", toDateKey(tenDaysFromToday));
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Deset");
+    await assertSearchIncludes(page, "Datum Cetrdeset");
+    await assertSearchExcludes(page, "Datum Sutra");
+
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterDateTo", toDateKey(tomorrow));
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Danas");
+    await assertSearchIncludes(page, "Datum Sutra");
+    await assertSearchExcludes(page, "Datum Deset");
+
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterDateFrom", toDateKey(tomorrow));
+    await page.fill("#filterDateTo", toDateKey(tomorrow));
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Sutra");
+    await assertSearchExcludes(page, "Datum Danas");
+
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterDateFrom", toDateKey(tenDaysFromToday));
+    await page.fill("#filterDateTo", toDateKey(today));
+    await page.click("#searchButton");
+    await assertVisibleText(page, "#searchMessage", "Datum od ne smije biti kasniji od datuma do.");
+    await assertSearchExcludes(page, "Datum Deset");
+
+    await page.click('[data-date-preset="today"]');
+    await assertSearchIncludes(page, "Datum Danas");
+    await assertSearchExcludes(page, "Datum Sutra");
+
+    await page.click('[data-date-preset="this-week"]');
+    await assertSearchIncludes(page, "Datum Danas");
+    await assertSearchExcludes(page, "Datum Cetrdeset");
+
+    await page.click('[data-date-preset="next-30"]');
+    await assertSearchIncludes(page, "Datum Deset");
+    await assertSearchExcludes(page, "Datum Cetrdeset");
+
+    await page.click('[data-date-preset="this-month"]');
+    await assertSearchIncludes(page, "Datum Danas");
+    await assertSearchExcludes(page, "Datum Cetrdeset");
+
+    await page.click('[data-date-preset="all"]');
+    await assertSearchIncludes(page, "Datum Cetrdeset");
+    await assertSearchExcludes(page, "Datum Obrisano");
+
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterDateFrom", toDateKey(tomorrow));
+    await page.fill("#filterDateTo", toDateKey(tomorrow));
+    await page.selectOption("#filterStatus", "otkazano");
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Otkazano");
+    await assertSearchExcludes(page, "Datum Sutra");
+
+    await page.check("#showDeletedToggle");
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterDateFrom", toDateKey(tomorrow));
+    await page.fill("#filterDateTo", toDateKey(tomorrow));
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Obrisano");
+    await page.uncheck("#showDeletedToggle");
+
+    await page.click("#clearFiltersButton");
     await page.fill("#filterPlaintiff", "Croatia");
     await page.selectOption("#filterStatus", "zakazano");
     await page.click("#searchButton");
@@ -175,6 +269,8 @@ async function run() {
     await page.click('[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
+    assert.equal(await page.locator("#filterDateFrom").isVisible(), true);
+    assert.equal(await page.locator('[data-date-preset="next-30"]').isVisible(), true);
 
     const relevantMessages = consoleMessages.filter((line) => !line.includes("favicon"));
     assert.deepEqual(relevantMessages, []);
@@ -190,9 +286,45 @@ function addMinutes(date, minutes) {
   return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function startOfDay(date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function toDateKey(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function toDateTimeInputValue(date) {
   const pad = (value) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function buildStoredHearing(id, date, plaintiff, defendant, status = "zakazano") {
+  const createdAt = new Date().toISOString();
+  return {
+    id,
+    plaintiff,
+    defendant,
+    caseNumber: `P-${id}/2026`,
+    hearingDateTime: toDateTimeInputValue(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10, 0)),
+    status,
+    reminders: [],
+    reminderDisabled: true,
+    disputeSubject: "Test datuma",
+    disputeValue: "100 EUR",
+    specificity: "Smoke test",
+    createdAt,
+    updatedAt: createdAt
+  };
 }
 
 async function assertVisibleText(page, selector, expectedText) {
@@ -200,6 +332,16 @@ async function assertVisibleText(page, selector, expectedText) {
   await assert.equal(await locator.isVisible(), true, `${selector} should be visible`);
   const text = await locator.innerText();
   assert.ok(text.includes(expectedText), `${selector} should contain "${expectedText}", got "${text}"`);
+}
+
+async function assertSearchIncludes(page, expectedText) {
+  const text = await page.locator("#searchResults").innerText();
+  assert.ok(text.includes(expectedText), `Search results should contain "${expectedText}", got "${text}"`);
+}
+
+async function assertSearchExcludes(page, unexpectedText) {
+  const text = await page.locator("#searchResults").innerText();
+  assert.equal(text.includes(unexpectedText), false, `Search results should not contain "${unexpectedText}", got "${text}"`);
 }
 
 run().catch((error) => {

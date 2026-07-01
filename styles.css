@@ -617,6 +617,35 @@ select.invalid {
   margin-top: 18px;
 }
 
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.date-presets .compact-button {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.search-message {
+  min-height: 20px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.search-message:empty {
+  display: none;
+}
+
+.search-message.error {
+  color: var(--danger);
+}
+
 .search-actions .primary-button {
   width: 100%;
   min-height: 48px;
@@ -754,6 +783,12 @@ select.invalid {
   color: var(--muted);
   background: var(--surface-soft);
   font-size: 14px;
+}
+
+.search-empty.error {
+  border-color: rgba(184, 65, 65, 0.35);
+  color: var(--danger);
+  background: rgba(184, 65, 65, 0.08);
 }
 
 .compact-button {

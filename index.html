@@ -270,7 +270,27 @@
               <span>Status</span>
               <select id="filterStatus"></select>
             </label>
+
+            <label>
+              <span>Datum od</span>
+              <input id="filterDateFrom" type="date">
+            </label>
+
+            <label>
+              <span>Datum do</span>
+              <input id="filterDateTo" type="date">
+            </label>
           </div>
+
+          <div class="date-presets" aria-label="Brzi datumski filteri">
+            <button class="ghost-button compact-button" type="button" data-date-preset="today">Danas</button>
+            <button class="ghost-button compact-button" type="button" data-date-preset="this-week">Ovaj tjedan</button>
+            <button class="ghost-button compact-button" type="button" data-date-preset="next-30">Sljedećih 30 dana</button>
+            <button class="ghost-button compact-button" type="button" data-date-preset="this-month">Ovaj mjesec</button>
+            <button class="ghost-button compact-button" type="button" data-date-preset="all">Sva ročišta</button>
+          </div>
+
+          <p class="search-message" id="searchMessage" role="status" aria-live="polite"></p>
 
           <div class="search-actions">
             <button class="primary-button" type="button" id="searchButton">Pretraži</button>

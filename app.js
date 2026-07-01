@@ -70,6 +70,8 @@
     visibleEnd: null,
     showDeleted: false,
     searchSubmitted: false,
+    searchError: "",
+    showAllSearchResults: false,
     activeReminders: [],
     filters: {
       plaintiff: "",
@@ -77,7 +79,9 @@
       subject: "",
       value: "",
       other: "",
-      status: ""
+      status: "",
+      dateFrom: "",
+      dateTo: ""
     }
   };
 
@@ -121,10 +125,14 @@
       subject: document.getElementById("filterSubject"),
       value: document.getElementById("filterValue"),
       other: document.getElementById("filterOther"),
-      status: document.getElementById("filterStatus")
+      status: document.getElementById("filterStatus"),
+      dateFrom: document.getElementById("filterDateFrom"),
+      dateTo: document.getElementById("filterDateTo")
     },
+    datePresetButtons: Array.from(document.querySelectorAll("[data-date-preset]")),
     searchButton: document.getElementById("searchButton"),
     clearFiltersButton: document.getElementById("clearFiltersButton"),
+    searchMessage: document.getElementById("searchMessage"),
     searchResults: document.getElementById("searchResults"),
     form: document.getElementById("hearingForm"),
     formTitle: document.getElementById("formTitle"),
@@ -236,6 +244,9 @@
       render();
     });
     els.searchButton.addEventListener("click", applySearch);
+    els.datePresetButtons.forEach((button) => {
+      button.addEventListener("click", () => applyDatePreset(button.dataset.datePreset));
+    });
     Object.values(els.filters).forEach((input) => {
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -1211,6 +1222,16 @@
 
   function renderSearchResults() {
     els.searchResults.replaceChildren();
+    els.searchMessage.textContent = state.searchError;
+    els.searchMessage.classList.toggle("error", Boolean(state.searchError));
+
+    if (state.searchError) {
+      const error = document.createElement("div");
+      error.className = "search-empty error";
+      error.textContent = state.searchError;
+      els.searchResults.append(error);
+      return;
+    }
 
     if (!state.searchSubmitted) {
       const hint = document.createElement("div");
@@ -1465,6 +1486,7 @@
   function matchesFilters(hearing) {
     const filters = state.filters;
     if (filters.status && normalizeStatus(hearing.status) !== filters.status) return false;
+    if (!matchesDateRange(hearing, filters)) return false;
 
     const checks = [
       [filters.plaintiff, hearing.plaintiff],
@@ -1480,19 +1502,31 @@
     return Object.values(state.filters).some(Boolean);
   }
 
-  function clearFilters() {
+  function clearFilters(options = {}) {
     Object.keys(state.filters).forEach((key) => {
       state.filters[key] = "";
       els.filters[key].value = "";
     });
-    state.searchSubmitted = false;
+    state.searchError = "";
+    state.showAllSearchResults = Boolean(options.showAll);
+    state.searchSubmitted = Boolean(options.showAll);
     render();
   }
 
   function applySearch() {
     Object.entries(els.filters).forEach(([key, input]) => {
-      state.filters[key] = key === "status" ? normalizeStatus(input.value, "") : normalizeSearch(input.value);
+      if (key === "status") {
+        state.filters[key] = normalizeStatus(input.value, "");
+        return;
+      }
+      if (key === "dateFrom" || key === "dateTo") {
+        state.filters[key] = input.value.trim();
+        return;
+      }
+      state.filters[key] = normalizeSearch(input.value);
     });
+    state.searchError = validateSearchDateRange();
+    state.showAllSearchResults = false;
     state.searchSubmitted = true;
     render();
     requestAnimationFrame(() => {
@@ -1501,10 +1535,60 @@
   }
 
   function getSearchResults() {
-    if (!hasActiveFilters()) return [];
+    if (state.searchError || (!hasActiveFilters() && !state.showAllSearchResults)) return [];
     return getVisibleHearings()
       .filter(matchesFilters)
       .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
+  }
+
+  function applyDatePreset(preset) {
+    const today = stripTime(new Date());
+    let from = "";
+    let to = "";
+
+    if (preset === "all") {
+      clearFilters({ showAll: true });
+      requestAnimationFrame(() => {
+        els.searchResults.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
+    if (preset === "today") {
+      from = today;
+      to = today;
+    } else if (preset === "this-week") {
+      from = getWeekStart(today);
+      to = addDays(from, 6);
+    } else if (preset === "next-30") {
+      from = today;
+      to = addDays(today, 30);
+    } else if (preset === "this-month") {
+      from = startOfMonth(today);
+      to = endOfMonth(today);
+    }
+
+    els.filters.dateFrom.value = from ? toDateKey(from) : "";
+    els.filters.dateTo.value = to ? toDateKey(to) : "";
+    applySearch();
+  }
+
+  function validateSearchDateRange() {
+    const from = parseDateInput(state.filters.dateFrom);
+    const to = parseDateInput(state.filters.dateTo);
+    if (from && to && from > to) return "Datum od ne smije biti kasniji od datuma do.";
+    return "";
+  }
+
+  function matchesDateRange(hearing, filters) {
+    const hearingDate = new Date(hearing.hearingDateTime);
+    if (Number.isNaN(hearingDate.getTime())) return false;
+
+    const from = parseDateInput(filters.dateFrom);
+    const to = parseDateInput(filters.dateTo);
+    if (from && hearingDate < from) return false;
+    if (to && hearingDate > endOfDay(to)) return false;
+    return true;
   }
 
   function jumpToSelectedMonth() {
@@ -1650,6 +1734,30 @@
     const result = new Date(date);
     result.setHours(0, 0, 0, 0);
     return result;
+  }
+
+  function endOfDay(date) {
+    const result = new Date(date);
+    result.setHours(23, 59, 59, 999);
+    return result;
+  }
+
+  function parseDateInput(value) {
+    if (!value) return null;
+    const parts = String(value).split("-").map(Number);
+    if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) return null;
+
+    const [year, month, day] = parts;
+    const parsed = new Date(year, month - 1, day);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return stripTime(parsed);
   }
 
   function isSameDay(a, b) {
