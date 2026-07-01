@@ -136,6 +136,7 @@ async function run() {
       const next30Tab = document.querySelector('.schedule-view-tabs [data-schedule-view="next30"]')?.getBoundingClientRect();
       const quickSearchStyle = getComputedStyle(document.querySelector("#scheduleQuickSearch"));
       const filterIconStyle = getComputedStyle(document.querySelector("#scheduleFilterButton"), "::before");
+      const topNewIconStyle = getComputedStyle(document.querySelector("#clearSelectionButton"), "::before");
       const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
       const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
@@ -158,6 +159,8 @@ async function run() {
         next30TabSingleLine: next30Tab ? next30Tab.height <= 40 : false,
         quickSearchHasIcon: quickSearchStyle.backgroundImage.includes("data:image/svg+xml")
           && Number.parseFloat(quickSearchStyle.paddingLeft) >= 34,
+        topNewButtonHasIcon: topNewIconStyle.content === '""'
+          && topNewIconStyle.maskImage !== "none",
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
@@ -177,6 +180,7 @@ async function run() {
     assert.equal(desktopLayout.scheduleTabsShareRowWithDatebar, true);
     assert.equal(desktopLayout.next30TabSingleLine, true);
     assert.equal(desktopLayout.quickSearchHasIcon, true);
+    assert.equal(desktopLayout.topNewButtonHasIcon, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
     assert.equal(desktopLayout.importSummaryIsSubtle, true);
