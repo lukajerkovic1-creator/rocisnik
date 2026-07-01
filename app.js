@@ -370,6 +370,12 @@
       return;
     }
 
+    const warnings = findScheduleWarnings(data, state.editingId);
+    if (warnings.length > 0 && !confirmScheduleWarnings(warnings)) {
+      showFormMessage("Spremanje je otkazano nakon upozorenja.", "error");
+      return;
+    }
+
     const now = new Date().toISOString();
 
     if (state.editingId) {
@@ -417,6 +423,130 @@
     if (!data.caseNumber) errors.push(["caseNumber", "Upiši broj predmeta."]);
     if (!data.hearingDateTime) errors.push(["hearingDateTime", "Odaberi datum i sat ročišta."]);
     return errors;
+  }
+
+  function findScheduleWarnings(data, ignoreId = null) {
+    const warnings = [];
+    const candidateDate = new Date(data.hearingDateTime);
+    if (Number.isNaN(candidateDate.getTime())) return warnings;
+
+    getActiveHearingsForChecks(ignoreId).forEach((hearing) => {
+      if (isPossibleDuplicate(data, candidateDate, hearing)) {
+        warnings.push({ type: "duplicate", hearing });
+      }
+      if (hasTimeConflict(candidateDate, new Date(hearing.hearingDateTime))) {
+        warnings.push({ type: "conflict", hearing });
+      }
+    });
+
+    return warnings;
+  }
+
+  function getActiveHearingsForChecks(ignoreId = null) {
+    return state.hearings.filter((hearing) =>
+      hearing.id !== ignoreId &&
+      !hearing.deletedAt &&
+      !hearing.deleted &&
+      !hearing.isDeleted
+    );
+  }
+
+  function isPossibleDuplicate(data, candidateDate, hearing) {
+    const existingDate = new Date(hearing.hearingDateTime);
+    if (!isSameDay(candidateDate, existingDate)) return false;
+    if (!isSimilarIdentifier(data.caseNumber, hearing.caseNumber)) return false;
+
+    return areSimilarParties(data.plaintiff, data.defendant, hearing.plaintiff, hearing.defendant);
+  }
+
+  function areSimilarParties(plaintiff, defendant, existingPlaintiff, existingDefendant) {
+    return isSimilarText(plaintiff, existingPlaintiff) && isSimilarText(defendant, existingDefendant);
+  }
+
+  function isSimilarIdentifier(a, b) {
+    const first = normalizeSearch(a);
+    const second = normalizeSearch(b);
+    if (!first || !second) return false;
+    if (first === second) return true;
+    if (Math.min(first.length, second.length) >= 5 && (first.includes(second) || second.includes(first))) return true;
+    return Math.max(first.length, second.length) >= 5 && levenshteinDistance(first, second) <= 1;
+  }
+
+  function isSimilarText(a, b) {
+    const first = normalizeSearch(a);
+    const second = normalizeSearch(b);
+    if (!first || !second) return false;
+    if (first === second) return true;
+    if (Math.min(first.length, second.length) >= 4 && (first.includes(second) || second.includes(first))) return true;
+
+    const longest = Math.max(first.length, second.length);
+    if (longest < 5) return false;
+    const distance = levenshteinDistance(first, second);
+    return 1 - distance / longest >= 0.82;
+  }
+
+  function hasTimeConflict(candidateStart, existingStart) {
+    if (Number.isNaN(existingStart.getTime()) || !isSameDay(candidateStart, existingStart)) return false;
+
+    const durationMs = 60 * 60 * 1000;
+    const minimumGapMs = 30 * 60 * 1000;
+    const candidateEnd = new Date(candidateStart.getTime() + durationMs);
+    const existingEnd = new Date(existingStart.getTime() + durationMs);
+    const overlaps = candidateStart < existingEnd && existingStart < candidateEnd;
+    if (overlaps) return true;
+
+    const gapMs = candidateStart >= existingEnd
+      ? candidateStart.getTime() - existingEnd.getTime()
+      : existingStart.getTime() - candidateEnd.getTime();
+    return gapMs < minimumGapMs;
+  }
+
+  function confirmScheduleWarnings(warnings) {
+    const duplicateLines = warnings
+      .filter((warning) => warning.type === "duplicate")
+      .map((warning) => `- ${formatWarningHearing(warning.hearing)}`);
+    const conflictLines = warnings
+      .filter((warning) => warning.type === "conflict")
+      .map((warning) => `- ${formatWarningHearing(warning.hearing)}`);
+
+    const messageParts = ["Pronađena su moguća upozorenja prije spremanja:"];
+    if (duplicateLines.length) {
+      messageParts.push("", "Mogući duplikati:", ...dedupeLines(duplicateLines));
+    }
+    if (conflictLines.length) {
+      messageParts.push("", "Konflikti termina:", ...dedupeLines(conflictLines));
+    }
+    messageParts.push("", "Želite li svejedno spremiti ročište?");
+
+    return window.confirm(messageParts.join("\n"));
+  }
+
+  function formatWarningHearing(hearing) {
+    return `${hearing.caseNumber || "Bez broja predmeta"} | ${hearing.plaintiff} - ${hearing.defendant} | ${formatLongDateTime(new Date(hearing.hearingDateTime))}`;
+  }
+
+  function dedupeLines(lines) {
+    return Array.from(new Set(lines));
+  }
+
+  function levenshteinDistance(a, b) {
+    const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+    const current = new Array(b.length + 1);
+
+    for (let i = 1; i <= a.length; i += 1) {
+      current[0] = i;
+      for (let j = 1; j <= b.length; j += 1) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        current[j] = Math.min(
+          current[j - 1] + 1,
+          previous[j] + 1,
+          previous[j - 1] + cost
+        );
+      }
+      for (let j = 0; j <= b.length; j += 1) previous[j] = current[j];
+    }
+
+    return previous[b.length];
   }
 
   function showValidation(errors) {
