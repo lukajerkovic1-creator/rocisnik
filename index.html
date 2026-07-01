@@ -138,6 +138,10 @@
               <button class="secondary-button" type="button" id="jumpButton">Prikaži</button>
               <button class="ghost-button compact-button" type="button" id="todayButton">Danas</button>
             </div>
+            <label class="deleted-toggle">
+              <input id="showDeletedToggle" type="checkbox">
+              <span>Prikaži obrisane zapise</span>
+            </label>
           </div>
 
           <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
@@ -203,6 +207,7 @@
           </div>
 
           <div class="details-content" id="detailsContent" hidden>
+            <div class="deleted-status" id="deletedStatus" hidden></div>
             <div class="case-title">
               <span id="detailsTime"></span>
               <h3 id="detailsParties"></h3>
@@ -233,6 +238,7 @@
 
             <div class="detail-actions">
               <button class="secondary-button" type="button" id="editButton">Uredi</button>
+              <button class="secondary-button" type="button" id="restoreButton" hidden>Vrati</button>
               <button class="danger-button" type="button" id="deleteButton">Obriši</button>
             </div>
           </div>

@@ -41,6 +41,7 @@
     currentMobileView: "schedule",
     visibleStart: null,
     visibleEnd: null,
+    showDeleted: false,
     searchSubmitted: false,
     filters: {
       plaintiff: "",
@@ -68,6 +69,7 @@
     jumpButton: document.getElementById("jumpButton"),
     todayButton: document.getElementById("todayButton"),
     loadMoreButton: document.getElementById("loadMoreButton"),
+    showDeletedToggle: document.getElementById("showDeletedToggle"),
     filters: {
       plaintiff: document.getElementById("filterPlaintiff"),
       defendant: document.getElementById("filterDefendant"),
@@ -98,6 +100,7 @@
     },
     detailsEmpty: document.getElementById("detailsEmpty"),
     detailsContent: document.getElementById("detailsContent"),
+    deletedStatus: document.getElementById("deletedStatus"),
     detailsSubtitle: document.getElementById("detailsSubtitle"),
     detailsTime: document.getElementById("detailsTime"),
     detailsParties: document.getElementById("detailsParties"),
@@ -107,6 +110,7 @@
     detailsDisputeValue: document.getElementById("detailsDisputeValue"),
     detailsSpecificity: document.getElementById("detailsSpecificity"),
     editButton: document.getElementById("editButton"),
+    restoreButton: document.getElementById("restoreButton"),
     deleteButton: document.getElementById("deleteButton")
   };
 
@@ -141,6 +145,13 @@
     });
     els.editButton.addEventListener("click", startEditSelected);
     els.deleteButton.addEventListener("click", deleteSelected);
+    els.restoreButton.addEventListener("click", restoreSelected);
+    els.showDeletedToggle.addEventListener("change", () => {
+      state.showDeleted = els.showDeletedToggle.checked;
+      const selected = state.hearings.find((hearing) => hearing.id === state.selectedId);
+      if (!state.showDeleted && isDeletedHearing(selected)) state.selectedId = null;
+      render();
+    });
     els.jumpButton.addEventListener("click", jumpToSelectedMonth);
     els.todayButton.addEventListener("click", scrollToToday);
     els.loadMoreButton.addEventListener("click", () => {
@@ -289,6 +300,8 @@
       disputeSubject: getOptionalImportString(item.disputeSubject),
       disputeValue: getOptionalImportString(item.disputeValue),
       specificity: getOptionalImportString(item.specificity),
+      deletedAt: getOptionalImportString(item.deletedAt),
+      deletedReason: getOptionalImportString(item.deletedReason),
       createdAt: getOptionalImportString(item.createdAt),
       updatedAt: getOptionalImportString(item.updatedAt)
     };
@@ -445,9 +458,7 @@
   function getActiveHearingsForChecks(ignoreId = null) {
     return state.hearings.filter((hearing) =>
       hearing.id !== ignoreId &&
-      !hearing.deletedAt &&
-      !hearing.deleted &&
-      !hearing.isDeleted
+      !isDeletedHearing(hearing)
     );
   }
 
@@ -568,6 +579,7 @@
 
   function render() {
     updateRangeLabel();
+    els.showDeletedToggle.checked = state.showDeleted;
     renderCalendar();
     renderSearchResults();
     renderDetails();
@@ -631,9 +643,11 @@
     button.type = "button";
     button.className = "hearing-button";
     if (hearing.id === state.selectedId) button.classList.add("selected");
+    if (isDeletedHearing(hearing)) button.classList.add("deleted");
     button.innerHTML = `
       <span class="hearing-time">${formatTime(new Date(hearing.hearingDateTime))}</span>
       <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
+      ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
     `;
     button.addEventListener("click", () => {
       state.selectedId = hearing.id;
@@ -649,10 +663,12 @@
     button.type = "button";
     button.className = "search-result-button";
     if (hearing.id === state.selectedId) button.classList.add("selected");
+    if (isDeletedHearing(hearing)) button.classList.add("deleted");
     button.innerHTML = `
       <span class="search-result-date">${formatLongDateTime(date)}</span>
       <span class="search-result-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
       <span class="search-result-meta">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}${hearing.disputeSubject ? ` | ${escapeHtml(hearing.disputeSubject)}` : ""}</span>
+      ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing, true))}</span>` : ""}
     `;
     button.addEventListener("click", () => {
       state.selectedId = hearing.id;
@@ -696,6 +712,7 @@
     if (!hearing) {
       els.detailsEmpty.hidden = false;
       els.detailsContent.hidden = true;
+      els.deletedStatus.hidden = true;
       els.detailsSubtitle.textContent = "Odaberi raspravu za prikaz detalja.";
       return;
     }
@@ -711,6 +728,13 @@
     els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
     els.detailsDisputeValue.textContent = hearing.disputeValue || "Nije uneseno";
     els.detailsSpecificity.textContent = hearing.specificity || "Nije uneseno";
+
+    const deleted = isDeletedHearing(hearing);
+    els.deletedStatus.hidden = !deleted;
+    els.deletedStatus.textContent = deleted ? getDeletedLabel(hearing, true) : "";
+    els.editButton.hidden = deleted;
+    els.deleteButton.hidden = deleted;
+    els.restoreButton.hidden = !deleted;
   }
 
   function updateFormMode() {
@@ -722,7 +746,7 @@
 
   function startEditSelected() {
     const hearing = getSelectedHearing();
-    if (!hearing) return;
+    if (!hearing || isDeletedHearing(hearing)) return;
 
     state.editingId = hearing.id;
     els.fields.id.value = hearing.id;
@@ -746,12 +770,35 @@
     const confirmed = window.confirm(`Obrisati ročište ${hearing.plaintiff} - ${hearing.defendant}?`);
     if (!confirmed) return;
 
-    state.hearings = state.hearings.filter((item) => item.id !== hearing.id);
-    state.selectedId = null;
+    const now = new Date().toISOString();
+    state.hearings = state.hearings.map((item) =>
+      item.id === hearing.id
+        ? { ...item, deletedAt: now, deletedReason: item.deletedReason || "", updatedAt: now }
+        : item
+    );
+    state.selectedId = state.showDeleted ? hearing.id : null;
     state.editingId = null;
     saveHearings();
     resetForm();
-    setMobileView("schedule");
+    setMobileView(state.showDeleted ? "details" : "schedule");
+    render();
+  }
+
+  function restoreSelected() {
+    const hearing = getSelectedHearing();
+    if (!hearing || !isDeletedHearing(hearing)) return;
+
+    const confirmed = window.confirm(`Vratiti ročište ${hearing.plaintiff} - ${hearing.defendant}?`);
+    if (!confirmed) return;
+
+    const now = new Date().toISOString();
+    state.hearings = state.hearings.map((item) => {
+      if (item.id !== hearing.id) return item;
+      const { deletedAt, deletedReason, deleted, isDeleted, ...restored } = item;
+      return { ...restored, updatedAt: now };
+    });
+    state.selectedId = hearing.id;
+    saveHearings();
     render();
   }
 
@@ -783,14 +830,32 @@
   }
 
   function getSelectedHearing() {
-    return state.hearings.find((hearing) => hearing.id === state.selectedId) || null;
+    const hearing = state.hearings.find((item) => item.id === state.selectedId) || null;
+    if (!hearing) return null;
+    if (isDeletedHearing(hearing) && !state.showDeleted) return null;
+    return hearing;
   }
 
   function getHearingsForDay(day) {
-    return state.hearings
+    return getVisibleHearings()
       .filter((hearing) => isSameDay(new Date(hearing.hearingDateTime), day))
       .filter(matchesFilters)
       .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
+  }
+
+  function getVisibleHearings() {
+    return state.hearings.filter((hearing) => state.showDeleted || !isDeletedHearing(hearing));
+  }
+
+  function isDeletedHearing(hearing) {
+    return Boolean(hearing && (hearing.deletedAt || hearing.deleted || hearing.isDeleted));
+  }
+
+  function getDeletedLabel(hearing, includeTime = false) {
+    if (!hearing?.deletedAt) return "Obrisano";
+    const deletedDate = new Date(hearing.deletedAt);
+    if (Number.isNaN(deletedDate.getTime())) return "Obrisano";
+    return `Obrisano ${includeTime ? formatLongDateTime(deletedDate) : formatShortDate(deletedDate)}`;
   }
 
   function matchesFilters(hearing) {
@@ -831,7 +896,7 @@
 
   function getSearchResults() {
     if (!hasActiveFilters()) return [];
-    return state.hearings
+    return getVisibleHearings()
       .filter(matchesFilters)
       .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
   }
