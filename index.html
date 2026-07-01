@@ -74,6 +74,26 @@
         </div>
       </section>
 
+      <section class="reminders-panel" aria-labelledby="remindersTitle">
+        <div class="panel-heading reminders-heading">
+          <div>
+            <h2 id="remindersTitle">Podsjetnici</h2>
+            <p>Podsjetnici se prikazuju dok je aplikacija otvorena ili pri sljedećem otvaranju aplikacije. Za pouzdane sistemske podsjetnike koristite i izvoz u kalendar.</p>
+          </div>
+          <button class="secondary-button compact-button" type="button" id="enableNotificationsButton">Uključi obavijesti preglednika</button>
+        </div>
+
+        <div class="reminder-settings">
+          <label>
+            <span>Zadano za nova ročišta</span>
+            <select id="defaultReminderSelect"></select>
+          </label>
+          <p id="notificationStatus" class="notification-status" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="reminders-list" id="remindersList" aria-live="polite"></div>
+      </section>
+
       <nav class="mobile-tabs" aria-label="Mobilna navigacija">
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
         <button class="mobile-tab" type="button" data-mobile-view="search">Pretraži</button>
@@ -117,6 +137,39 @@
                 <span>Status ročišta</span>
                 <select id="hearingStatus" name="hearingStatus"></select>
               </label>
+
+              <fieldset class="reminder-fieldset full-row">
+                <legend>Podsjetnici za ročište</legend>
+                <p>Podsjetnici rade dok je aplikacija otvorena ili pri sljedećem otvaranju.</p>
+                <label class="checkbox-line">
+                  <input id="reminder7d" type="checkbox" data-reminder-minutes="10080">
+                  <span>7 dana prije</span>
+                </label>
+                <label class="checkbox-line">
+                  <input id="reminder1d" type="checkbox" data-reminder-minutes="1440">
+                  <span>1 dan prije</span>
+                </label>
+                <label class="checkbox-line">
+                  <input id="reminder2h" type="checkbox" data-reminder-minutes="120">
+                  <span>2 sata prije</span>
+                </label>
+                <div class="custom-reminder-row">
+                  <label class="checkbox-line">
+                    <input id="reminderCustomEnabled" type="checkbox">
+                    <span>Prilagođeno</span>
+                  </label>
+                  <input id="reminderCustomValue" type="number" inputmode="numeric" min="1" max="365" placeholder="Vrijednost">
+                  <select id="reminderCustomUnit" aria-label="Jedinica prilagođenog podsjetnika">
+                    <option value="minutes">minuta</option>
+                    <option value="hours">sati</option>
+                    <option value="days">dana</option>
+                  </select>
+                </div>
+                <label class="checkbox-line">
+                  <input id="reminderDisabled" type="checkbox">
+                  <span>Isključi podsjetnike za ovo ročište</span>
+                </label>
+              </fieldset>
 
               <label class="full-row">
                 <span>Predmet spora</span>
@@ -259,6 +312,10 @@
               <div>
                 <dt>Status ročišta</dt>
                 <dd id="detailsStatus"></dd>
+              </div>
+              <div>
+                <dt>Podsjetnici</dt>
+                <dd id="detailsReminders"></dd>
               </div>
               <div>
                 <dt>Predmet spora</dt>

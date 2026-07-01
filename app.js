@@ -6,9 +6,24 @@
   const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
   const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
   const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
+  const DEFAULT_REMINDER_KEY = "rocisnik.defaultReminder.v1";
   const BACKUP_FORMAT_VERSION = 1;
   const BACKUP_REMINDER_INTERVAL_DAYS = 7;
   const BACKUP_REMINDER_LATER_HOURS = 4;
+  const REMINDER_CHECK_INTERVAL_MS = 60 * 1000;
+  const REMINDER_SNOOZE_MINUTES = 60;
+  const DEFAULT_REMINDER_MINUTES = 24 * 60;
+  const PRESET_REMINDERS = [
+    { id: "7d", label: "7 dana prije", minutesBefore: 7 * 24 * 60 },
+    { id: "1d", label: "1 dan prije", minutesBefore: 24 * 60 },
+    { id: "2h", label: "2 sata prije", minutesBefore: 2 * 60 }
+  ];
+  const DEFAULT_REMINDER_OPTIONS = [
+    { value: "none", label: "Bez zadanog podsjetnika", reminders: [] },
+    { value: "2h", label: "2 sata prije", reminders: [{ id: "2h", label: "2 sata prije", minutesBefore: 2 * 60 }] },
+    { value: "1d", label: "1 dan prije", reminders: [{ id: "1d", label: "1 dan prije", minutesBefore: 24 * 60 }] },
+    { value: "7d", label: "7 dana prije", reminders: [{ id: "7d", label: "7 dana prije", minutesBefore: 7 * 24 * 60 }] }
+  ];
   const DEFAULT_HEARING_STATUS = "zakazano";
   const HEARING_STATUSES = [
     { value: "zakazano", label: "Zakazano", className: "status-scheduled" },
@@ -55,6 +70,7 @@
     visibleEnd: null,
     showDeleted: false,
     searchSubmitted: false,
+    activeReminders: [],
     filters: {
       plaintiff: "",
       defendant: "",
@@ -84,6 +100,10 @@
     backupReminderExportButton: document.getElementById("backupReminderExportButton"),
     backupReminderLaterButton: document.getElementById("backupReminderLaterButton"),
     backupReminderTodayButton: document.getElementById("backupReminderTodayButton"),
+    defaultReminderSelect: document.getElementById("defaultReminderSelect"),
+    enableNotificationsButton: document.getElementById("enableNotificationsButton"),
+    notificationStatus: document.getElementById("notificationStatus"),
+    remindersList: document.getElementById("remindersList"),
     exportJsonButton: document.getElementById("exportJsonButton"),
     importJsonButton: document.getElementById("importJsonButton"),
     importJsonFile: document.getElementById("importJsonFile"),
@@ -121,6 +141,13 @@
       caseNumber: document.getElementById("caseNumber"),
       hearingDateTime: document.getElementById("hearingDateTime"),
       status: document.getElementById("hearingStatus"),
+      reminder7d: document.getElementById("reminder7d"),
+      reminder1d: document.getElementById("reminder1d"),
+      reminder2h: document.getElementById("reminder2h"),
+      reminderCustomEnabled: document.getElementById("reminderCustomEnabled"),
+      reminderCustomValue: document.getElementById("reminderCustomValue"),
+      reminderCustomUnit: document.getElementById("reminderCustomUnit"),
+      reminderDisabled: document.getElementById("reminderDisabled"),
       disputeSubject: document.getElementById("disputeSubject"),
       disputeValue: document.getElementById("disputeValue"),
       specificity: document.getElementById("specificity")
@@ -134,6 +161,7 @@
     detailsCaseNumber: document.getElementById("detailsCaseNumber"),
     detailsDateTime: document.getElementById("detailsDateTime"),
     detailsStatus: document.getElementById("detailsStatus"),
+    detailsReminders: document.getElementById("detailsReminders"),
     detailsDisputeSubject: document.getElementById("detailsDisputeSubject"),
     detailsDisputeValue: document.getElementById("detailsDisputeValue"),
     detailsSpecificity: document.getElementById("detailsSpecificity"),
@@ -154,8 +182,10 @@
     state.visibleEnd = getDefaultVisibleEnd();
     fillMonthSelect();
     fillStatusSelects();
+    fillDefaultReminderSelect();
     els.monthSelect.value = String(startOfToday.getMonth());
     els.yearInput.value = String(startOfToday.getFullYear());
+    els.defaultReminderSelect.value = getDefaultReminderOptionValue();
     updateRangeLabel();
     els.todayChip.textContent = `Danas: ${formatShortDate(startOfToday)}`;
 
@@ -178,6 +208,9 @@
     els.backupReminderExportButton.addEventListener("click", exportJsonBackup);
     els.backupReminderLaterButton.addEventListener("click", snoozeBackupReminder);
     els.backupReminderTodayButton.addEventListener("click", hideBackupReminderToday);
+    els.defaultReminderSelect.addEventListener("change", saveDefaultReminderOption);
+    els.enableNotificationsButton.addEventListener("click", requestBrowserNotifications);
+    els.remindersList.addEventListener("click", handleReminderAction);
     els.importJsonButton.addEventListener("click", () => els.importJsonFile.click());
     els.importJsonFile.addEventListener("change", handleImportFile);
     els.cancelEditButton.addEventListener("click", resetForm);
@@ -217,8 +250,12 @@
     });
 
     setDefaultDateTime();
+    setDefaultReminderForm();
     syncDataNotice();
+    updateNotificationStatus();
     render();
+    checkDueReminders();
+    window.setInterval(checkDueReminders, REMINDER_CHECK_INTERVAL_MS);
   }
 
   function syncDataNotice() {
@@ -309,6 +346,7 @@
       resetForm();
       focusImportedRange(result.visibleHearings);
       render();
+      checkDueReminders();
       showBackupMessage(result.message);
     } catch (error) {
       showBackupMessage("Datoteka nije ispravan JSON backup Ročišnika.", "error");
@@ -369,6 +407,11 @@
       caseNumber,
       hearingDateTime,
       status: normalizeStatus(item.status),
+      reminders: normalizeReminders(item.reminders),
+      reminderDismissedAt: getOptionalImportString(item.reminderDismissedAt),
+      reminderSnoozedUntil: getOptionalImportString(item.reminderSnoozedUntil),
+      reminderDisabled: Boolean(item.reminderDisabled),
+      reminderEvents: normalizeReminderEvents(item.reminderEvents),
       disputeSubject: getOptionalImportString(item.disputeSubject),
       disputeValue: getOptionalImportString(item.disputeValue),
       specificity: getOptionalImportString(item.specificity),
@@ -479,6 +522,350 @@
     return Boolean(snoozeUntil && snoozeUntil.getTime() > Date.now());
   }
 
+  function fillDefaultReminderSelect() {
+    els.defaultReminderSelect.replaceChildren();
+    DEFAULT_REMINDER_OPTIONS.forEach((optionConfig) => {
+      const option = document.createElement("option");
+      option.value = optionConfig.value;
+      option.textContent = optionConfig.label;
+      els.defaultReminderSelect.append(option);
+    });
+  }
+
+  function getDefaultReminderOptionValue() {
+    const stored = window.localStorage.getItem(DEFAULT_REMINDER_KEY);
+    return DEFAULT_REMINDER_OPTIONS.some((option) => option.value === stored) ? stored : "1d";
+  }
+
+  function getDefaultReminderConfigs() {
+    const selected = DEFAULT_REMINDER_OPTIONS.find((option) => option.value === getDefaultReminderOptionValue()) || DEFAULT_REMINDER_OPTIONS[2];
+    return normalizeReminders(selected.reminders);
+  }
+
+  function saveDefaultReminderOption() {
+    window.localStorage.setItem(DEFAULT_REMINDER_KEY, els.defaultReminderSelect.value);
+    if (!state.editingId) setDefaultReminderForm();
+  }
+
+  function setDefaultReminderForm() {
+    applyReminderConfigsToForm(getDefaultReminderConfigs(), false);
+  }
+
+  function applyRemindersToForm(hearing) {
+    applyReminderConfigsToForm(normalizeReminders(hearing.reminders), Boolean(hearing.reminderDisabled));
+  }
+
+  function applyReminderConfigsToForm(reminders, disabled) {
+    const minutes = new Set(reminders.map((reminder) => reminder.minutesBefore));
+    els.fields.reminder7d.checked = minutes.has(7 * 24 * 60);
+    els.fields.reminder1d.checked = minutes.has(24 * 60);
+    els.fields.reminder2h.checked = minutes.has(2 * 60);
+    els.fields.reminderDisabled.checked = disabled;
+
+    const customReminder = reminders.find((reminder) =>
+      !PRESET_REMINDERS.some((preset) => preset.minutesBefore === reminder.minutesBefore)
+    );
+    els.fields.reminderCustomEnabled.checked = Boolean(customReminder);
+    if (customReminder) {
+      const custom = decomposeReminderMinutes(customReminder.minutesBefore);
+      els.fields.reminderCustomValue.value = String(custom.value);
+      els.fields.reminderCustomUnit.value = custom.unit;
+    } else {
+      els.fields.reminderCustomValue.value = "";
+      els.fields.reminderCustomUnit.value = "minutes";
+    }
+  }
+
+  function getFormReminders() {
+    const reminders = [];
+    [
+      els.fields.reminder7d,
+      els.fields.reminder1d,
+      els.fields.reminder2h
+    ].forEach((input) => {
+      if (input.checked) reminders.push(createReminderConfig(Number(input.dataset.reminderMinutes)));
+    });
+
+    const custom = getCustomReminderConfig();
+    if (els.fields.reminderCustomEnabled.checked && custom) reminders.push(custom);
+
+    return normalizeReminders(reminders);
+  }
+
+  function getCustomReminderConfig() {
+    const value = Number(els.fields.reminderCustomValue.value);
+    if (!Number.isFinite(value) || value < 1) return null;
+
+    const multipliers = {
+      minutes: 1,
+      hours: 60,
+      days: 24 * 60
+    };
+    const unit = multipliers[els.fields.reminderCustomUnit.value] ? els.fields.reminderCustomUnit.value : "minutes";
+    const minutesBefore = Math.round(value * multipliers[unit]);
+    if (minutesBefore < 1) return null;
+    return {
+      id: `custom-${minutesBefore}`,
+      label: `Prilagođeno: ${formatReminderOffset(minutesBefore)}`,
+      minutesBefore
+    };
+  }
+
+  function createReminderConfig(minutesBefore) {
+    const preset = PRESET_REMINDERS.find((item) => item.minutesBefore === minutesBefore);
+    return {
+      id: preset?.id || `custom-${minutesBefore}`,
+      label: preset?.label || `Prilagođeno: ${formatReminderOffset(minutesBefore)}`,
+      minutesBefore
+    };
+  }
+
+  function normalizeReminders(value) {
+    const source = Array.isArray(value) ? value : [createReminderConfig(DEFAULT_REMINDER_MINUTES)];
+    const byMinutes = new Map();
+
+    source.forEach((item) => {
+      const minutesBefore = Number(item?.minutesBefore);
+      if (!Number.isFinite(minutesBefore) || minutesBefore < 1) return;
+      const normalizedMinutes = Math.round(minutesBefore);
+      byMinutes.set(normalizedMinutes, {
+        id: String(item.id || `custom-${normalizedMinutes}`),
+        label: String(item.label || formatReminderOffset(normalizedMinutes)),
+        minutesBefore: normalizedMinutes
+      });
+    });
+
+    return Array.from(byMinutes.values()).sort((a, b) => b.minutesBefore - a.minutesBefore);
+  }
+
+  function normalizeReminderEvents(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(
+      Object.entries(value).map(([key, event]) => [
+        key,
+        {
+          shownAt: getOptionalImportString(event?.shownAt),
+          dismissedAt: getOptionalImportString(event?.dismissedAt),
+          notificationSentAt: getOptionalImportString(event?.notificationSentAt)
+        }
+      ])
+    );
+  }
+
+  function decomposeReminderMinutes(minutesBefore) {
+    if (minutesBefore % (24 * 60) === 0) return { value: minutesBefore / (24 * 60), unit: "days" };
+    if (minutesBefore % 60 === 0) return { value: minutesBefore / 60, unit: "hours" };
+    return { value: minutesBefore, unit: "minutes" };
+  }
+
+  function shouldResetReminderEvents(hearing, data) {
+    return hearing.hearingDateTime !== data.hearingDateTime ||
+      normalizeStatus(hearing.status) !== data.status ||
+      Boolean(hearing.reminderDisabled) !== data.reminderDisabled ||
+      JSON.stringify(normalizeReminders(hearing.reminders)) !== JSON.stringify(normalizeReminders(data.reminders));
+  }
+
+  function checkDueReminders() {
+    state.activeReminders = getDueReminders(new Date());
+    markShownReminderEvents(state.activeReminders);
+    sendBrowserNotifications(state.activeReminders);
+    renderReminders();
+  }
+
+  function getDueReminders(now) {
+    return state.hearings
+      .filter(canCreateReminder)
+      .flatMap((hearing) => getDueRemindersForHearing(hearing, now))
+      .sort((a, b) => a.hearingDate - b.hearingDate || b.reminder.minutesBefore - a.reminder.minutesBefore);
+  }
+
+  function getDueRemindersForHearing(hearing, now) {
+    const hearingDate = new Date(hearing.hearingDateTime);
+    if (Number.isNaN(hearingDate.getTime()) || hearingDate <= now) return [];
+
+    const snoozedUntil = hearing.reminderSnoozedUntil ? new Date(hearing.reminderSnoozedUntil) : null;
+    if (snoozedUntil && !Number.isNaN(snoozedUntil.getTime()) && snoozedUntil > now) return [];
+
+    const events = normalizeReminderEvents(hearing.reminderEvents);
+    return normalizeReminders(hearing.reminders)
+      .map((reminder) => {
+        const reminderAt = new Date(hearingDate.getTime() - reminder.minutesBefore * 60 * 1000);
+        const key = getReminderKey(hearing, reminder);
+        return { hearing, hearingDate, reminder, reminderAt, key, event: events[key] || {} };
+      })
+      .filter((item) => item.reminderAt <= now && !item.event.dismissedAt);
+  }
+
+  function canCreateReminder(hearing) {
+    if (!hearing || isDeletedHearing(hearing) || hearing.reminderDisabled) return false;
+    const status = normalizeStatus(hearing.status);
+    return status !== "otkazano" && status !== "održano";
+  }
+
+  function getReminderKey(hearing, reminder) {
+    return `${hearing.hearingDateTime}|${reminder.minutesBefore}`;
+  }
+
+  function renderReminders() {
+    els.remindersList.replaceChildren();
+
+    if (state.activeReminders.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "reminder-empty";
+      empty.textContent = "Nema dospjelih podsjetnika.";
+      els.remindersList.append(empty);
+      return;
+    }
+
+    state.activeReminders.forEach((item) => els.remindersList.append(createReminderItem(item)));
+  }
+
+  function createReminderItem(item) {
+    const wrapper = document.createElement("article");
+    wrapper.className = "reminder-item";
+    wrapper.innerHTML = `
+      <div>
+        <div class="reminder-item-title">${escapeHtml(item.hearing.plaintiff)} - ${escapeHtml(item.hearing.defendant)}</div>
+        <div class="reminder-item-meta">${escapeHtml(item.hearing.caseNumber || "Bez broja predmeta")} | ${escapeHtml(formatLongDateTime(item.hearingDate))}</div>
+        <div class="reminder-item-meta">Podsjetnik: ${escapeHtml(item.reminder.label)} (${escapeHtml(formatReminderDueText(item.reminderAt))})</div>
+      </div>
+      <div class="reminder-actions">
+        <button class="secondary-button compact-button" type="button" data-reminder-action="seen" data-hearing-id="${escapeHtml(item.hearing.id)}" data-reminder-key="${escapeHtml(item.key)}">Viđeno</button>
+        <button class="ghost-button compact-button" type="button" data-reminder-action="snooze" data-hearing-id="${escapeHtml(item.hearing.id)}" data-reminder-key="${escapeHtml(item.key)}">Odgodi</button>
+        <button class="text-button compact-button" type="button" data-reminder-action="disable" data-hearing-id="${escapeHtml(item.hearing.id)}" data-reminder-key="${escapeHtml(item.key)}">Isključi za ovo ročište</button>
+      </div>
+    `;
+    return wrapper;
+  }
+
+  function handleReminderAction(event) {
+    const button = event.target.closest("[data-reminder-action]");
+    if (!button) return;
+
+    const action = button.dataset.reminderAction;
+    const hearingId = button.dataset.hearingId;
+    const reminderKey = button.dataset.reminderKey;
+    const now = new Date().toISOString();
+
+    state.hearings = state.hearings.map((hearing) => {
+      if (hearing.id !== hearingId) return hearing;
+      if (action === "disable") {
+        return { ...hearing, reminderDisabled: true, reminderSnoozedUntil: "", reminderDismissedAt: now, updatedAt: now };
+      }
+      if (action === "snooze") {
+        const snoozedUntil = new Date();
+        snoozedUntil.setMinutes(snoozedUntil.getMinutes() + REMINDER_SNOOZE_MINUTES);
+        return { ...hearing, reminderSnoozedUntil: snoozedUntil.toISOString(), updatedAt: now };
+      }
+      return {
+        ...hearing,
+        reminderDismissedAt: now,
+        reminderEvents: {
+          ...normalizeReminderEvents(hearing.reminderEvents),
+          [reminderKey]: {
+            ...(normalizeReminderEvents(hearing.reminderEvents)[reminderKey] || {}),
+            dismissedAt: now,
+            shownAt: (normalizeReminderEvents(hearing.reminderEvents)[reminderKey] || {}).shownAt || now
+          }
+        },
+        updatedAt: now
+      };
+    });
+
+    saveHearings();
+    checkDueReminders();
+    renderDetails();
+  }
+
+  function markShownReminderEvents(reminders) {
+    const now = new Date().toISOString();
+    let changed = false;
+    reminders.forEach((item) => {
+      if (item.event.shownAt) return;
+      changed = true;
+      state.hearings = state.hearings.map((hearing) => {
+        if (hearing.id !== item.hearing.id) return hearing;
+        const events = normalizeReminderEvents(hearing.reminderEvents);
+        return {
+          ...hearing,
+          reminderEvents: {
+            ...events,
+            [item.key]: {
+              ...(events[item.key] || {}),
+              shownAt: now
+            }
+          }
+        };
+      });
+    });
+    if (changed) saveHearings();
+  }
+
+  function sendBrowserNotifications(reminders) {
+    if (!("Notification" in window) || window.Notification.permission !== "granted") return;
+
+    let changed = false;
+    const now = new Date().toISOString();
+    reminders.forEach((item) => {
+      if (item.event.notificationSentAt) return;
+      new window.Notification("Ročišnik podsjetnik", {
+        body: `${item.hearing.plaintiff} - ${item.hearing.defendant}, ${formatLongDateTime(item.hearingDate)}`
+      });
+      changed = true;
+      state.hearings = state.hearings.map((hearing) => {
+        if (hearing.id !== item.hearing.id) return hearing;
+        const events = normalizeReminderEvents(hearing.reminderEvents);
+        return {
+          ...hearing,
+          reminderEvents: {
+            ...events,
+            [item.key]: {
+              ...(events[item.key] || {}),
+              shownAt: (events[item.key] || {}).shownAt || now,
+              notificationSentAt: now
+            }
+          }
+        };
+      });
+    });
+    if (changed) saveHearings();
+  }
+
+  async function requestBrowserNotifications() {
+    if (!("Notification" in window)) {
+      els.notificationStatus.textContent = "Preglednik ne podržava obavijesti.";
+      return;
+    }
+
+    if (window.Notification.permission === "granted") {
+      els.notificationStatus.textContent = "Obavijesti preglednika su uključene.";
+      return;
+    }
+
+    if (window.Notification.permission === "denied") {
+      els.notificationStatus.textContent = "Obavijesti su blokirane u postavkama preglednika.";
+      return;
+    }
+
+    const permission = await window.Notification.requestPermission();
+    els.notificationStatus.textContent = permission === "granted"
+      ? "Obavijesti preglednika su uključene dok je aplikacija otvorena."
+      : "Obavijesti nisu uključene. In-app podsjetnici i dalje rade.";
+    checkDueReminders();
+  }
+
+  function updateNotificationStatus() {
+    if (!("Notification" in window)) {
+      els.notificationStatus.textContent = "In-app podsjetnici su uključeni.";
+      return;
+    }
+    if (window.Notification.permission === "granted") {
+      els.notificationStatus.textContent = "Obavijesti preglednika su uključene dok je aplikacija otvorena.";
+    } else {
+      els.notificationStatus.textContent = "Obavijesti preglednika su opcionalne.";
+    }
+  }
+
   function getStoredDate(key) {
     const value = window.localStorage.getItem(key);
     if (!value) return null;
@@ -511,17 +898,27 @@
     const now = new Date().toISOString();
 
     if (state.editingId) {
-      state.hearings = state.hearings.map((hearing) =>
-        hearing.id === state.editingId
-          ? { ...hearing, ...data, updatedAt: now }
-          : hearing
-      );
+      state.hearings = state.hearings.map((hearing) => {
+        if (hearing.id !== state.editingId) return hearing;
+        const resetReminderState = shouldResetReminderEvents(hearing, data);
+        return {
+          ...hearing,
+          ...data,
+          reminderEvents: resetReminderState ? {} : normalizeReminderEvents(hearing.reminderEvents),
+          reminderDismissedAt: resetReminderState ? "" : hearing.reminderDismissedAt || "",
+          reminderSnoozedUntil: resetReminderState || data.reminderDisabled ? "" : hearing.reminderSnoozedUntil || "",
+          updatedAt: now
+        };
+      });
       state.selectedId = state.editingId;
       showFormMessage("Ročište je ažurirano.", "success");
     } else {
       const hearing = {
         id: createId(),
         ...data,
+        reminderEvents: {},
+        reminderDismissedAt: "",
+        reminderSnoozedUntil: "",
         createdAt: now,
         updatedAt: now
       };
@@ -534,6 +931,7 @@
     resetForm({ keepMessage: true });
     setMobileView(state.selectedId ? "details" : "schedule");
     render();
+    checkDueReminders();
   }
 
   function getFormData() {
@@ -543,6 +941,8 @@
       caseNumber: els.fields.caseNumber.value.trim(),
       hearingDateTime: els.fields.hearingDateTime.value,
       status: normalizeStatus(els.fields.status.value),
+      reminders: getFormReminders(),
+      reminderDisabled: els.fields.reminderDisabled.checked,
       disputeSubject: els.fields.disputeSubject.value.trim(),
       disputeValue: els.fields.disputeValue.value.trim(),
       specificity: els.fields.specificity.value.trim()
@@ -556,6 +956,9 @@
     if (!data.caseNumber) errors.push(["caseNumber", "Upiši broj predmeta."]);
     if (!data.hearingDateTime) errors.push(["hearingDateTime", "Odaberi datum i sat ročišta."]);
     if (!isAllowedStatus(data.status)) errors.push(["status", "Odaberi ispravan status ročišta."]);
+    if (els.fields.reminderCustomEnabled.checked && !getCustomReminderConfig()) {
+      errors.push(["reminderCustomValue", "Upiši ispravan prilagođeni podsjetnik."]);
+    }
     return errors;
   }
 
@@ -703,6 +1106,7 @@
     els.showDeletedToggle.checked = state.showDeleted;
     renderSecurityPrompt();
     renderBackupReminder();
+    renderReminders();
     renderCalendar();
     renderSearchResults();
     renderDetails();
@@ -853,6 +1257,7 @@
     els.detailsCaseNumber.textContent = hearing.caseNumber;
     els.detailsDateTime.textContent = formatLongDateTime(date);
     els.detailsStatus.replaceChildren(createStatusBadge(hearing.status));
+    els.detailsReminders.textContent = getReminderSummary(hearing);
     els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
     els.detailsDisputeValue.textContent = hearing.disputeValue || "Nije uneseno";
     els.detailsSpecificity.textContent = hearing.specificity || "Nije uneseno";
@@ -883,6 +1288,7 @@
     els.fields.caseNumber.value = hearing.caseNumber;
     els.fields.hearingDateTime.value = hearing.hearingDateTime;
     els.fields.status.value = normalizeStatus(hearing.status);
+    applyRemindersToForm(hearing);
     els.fields.disputeSubject.value = hearing.disputeSubject;
     els.fields.disputeValue.value = hearing.disputeValue;
     els.fields.specificity.value = hearing.specificity;
@@ -911,6 +1317,7 @@
     resetForm();
     setMobileView(state.showDeleted ? "details" : "schedule");
     render();
+    checkDueReminders();
   }
 
   function restoreSelected() {
@@ -929,6 +1336,7 @@
     state.selectedId = hearing.id;
     saveHearings();
     render();
+    checkDueReminders();
   }
 
   function resetForm(options = {}) {
@@ -937,6 +1345,7 @@
     els.fields.id.value = "";
     setDefaultDateTime();
     els.fields.status.value = DEFAULT_HEARING_STATUS;
+    setDefaultReminderForm();
     if (!options.keepMessage) clearValidation();
     updateFormMode();
   }
@@ -1026,6 +1435,31 @@
 
   function createStatusBadgeHtml(value) {
     return `<span class="status-badge ${escapeHtml(getStatusClass(value))}">${escapeHtml(getStatusLabel(value))}</span>`;
+  }
+
+  function getReminderSummary(hearing) {
+    if (hearing.reminderDisabled) return "Podsjetnici su isključeni za ovo ročište";
+    const reminders = normalizeReminders(hearing.reminders);
+    if (!reminders.length) return "Nema podsjetnika";
+    return reminders.map((reminder) => reminder.label).join(", ");
+  }
+
+  function formatReminderOffset(minutesBefore) {
+    if (minutesBefore % (24 * 60) === 0) {
+      const days = minutesBefore / (24 * 60);
+      return days === 1 ? "1 dan prije" : `${days} dana prije`;
+    }
+    if (minutesBefore % 60 === 0) {
+      const hours = minutesBefore / 60;
+      return hours === 1 ? "1 sat prije" : `${hours} sati prije`;
+    }
+    return minutesBefore === 1 ? "1 minuta prije" : `${minutesBefore} minuta prije`;
+  }
+
+  function formatReminderDueText(reminderAt) {
+    const now = new Date();
+    if (reminderAt <= now) return "dospjelo";
+    return formatLongDateTime(reminderAt);
   }
 
   function matchesFilters(hearing) {
@@ -1166,7 +1600,12 @@
         .filter((item) => item && item.id && item.hearingDateTime)
         .map((item) => ({
           ...item,
-          status: normalizeStatus(item.status)
+          status: normalizeStatus(item.status),
+          reminders: normalizeReminders(item.reminders),
+          reminderDismissedAt: getOptionalImportString(item.reminderDismissedAt),
+          reminderSnoozedUntil: getOptionalImportString(item.reminderSnoozedUntil),
+          reminderDisabled: Boolean(item.reminderDisabled),
+          reminderEvents: normalizeReminderEvents(item.reminderEvents)
         }));
     } catch (error) {
       return [];

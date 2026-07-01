@@ -56,7 +56,7 @@ async function fillRequiredHearing(page, values = {}) {
   await page.fill("#plaintiff", values.plaintiff || "Croatia osiguranje");
   await page.fill("#defendant", values.defendant || "Marko Markovic");
   await page.fill("#caseNumber", values.caseNumber || "P-123/2026");
-  await page.fill("#hearingDateTime", values.hearingDateTime || "2026-07-03T09:00");
+  await page.fill("#hearingDateTime", values.hearingDateTime || toDateTimeInputValue(addMinutes(new Date(), 90)));
   await page.fill("#disputeSubject", values.disputeSubject || "Naknada stete");
   await page.fill("#disputeValue", values.disputeValue || "1.000 EUR");
   await page.fill("#specificity", values.specificity || "Pripremno rociste");
@@ -96,7 +96,16 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
 
+    assert.equal(await page.locator("#defaultReminderSelect").inputValue(), "1d");
+    assert.equal(await page.locator("#reminder1d").isChecked(), true);
+    await page.selectOption("#defaultReminderSelect", "2h");
+    assert.equal(await page.locator("#reminder2h").isChecked(), true);
+    assert.equal(await page.locator("#reminder1d").isChecked(), false);
+
     await fillRequiredHearing(page);
+    await page.check("#reminderCustomEnabled");
+    await page.fill("#reminderCustomValue", "30");
+    await page.selectOption("#reminderCustomUnit", "minutes");
     assert.equal(await page.locator("#hearingStatus").inputValue(), "zakazano");
     await page.click("#submitButton");
     await assertVisibleText(page, "#formMessage", "Ročište je dodano.");
@@ -104,7 +113,15 @@ async function run() {
     let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings.length, 1);
     assert.equal(hearings[0].status, "zakazano");
+    assert.deepEqual(hearings[0].reminders.map((reminder) => reminder.minutesBefore).sort((a, b) => a - b), [30, 120]);
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
+    await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
+    await assertVisibleText(page, "#remindersList", "2 sata prije");
+
+    await page.click('[data-reminder-action="seen"]');
+    await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
+    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    assert.ok(Object.values(hearings[0].reminderEvents || {}).some((event) => event.dismissedAt));
 
     await page.fill("#filterPlaintiff", "Croatia");
     await page.selectOption("#filterStatus", "zakazano");
@@ -122,6 +139,7 @@ async function run() {
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings[0].status, "otkazano");
     await assertVisibleText(page, "#detailsStatus", "Otkazano");
+    await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
 
     await page.selectOption("#filterStatus", "otkazano");
     await page.click("#searchButton");
@@ -166,6 +184,15 @@ async function run() {
     await browser.close();
     await app.close();
   }
+}
+
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function toDateTimeInputValue(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 async function assertVisibleText(page, selector, expectedText) {
