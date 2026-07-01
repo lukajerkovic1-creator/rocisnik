@@ -658,7 +658,6 @@ select:focus-visible {
   min-height: 66px;
   padding: 8px 18px;
   border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
   border-radius: 12px;
   color: var(--text);
   background: var(--surface);
@@ -746,8 +745,8 @@ select:focus-visible {
 .overview-card:not(.overview-card-static):hover,
 .overview-card:not(.overview-card-static):focus-visible,
 .overview-card.active {
-  border-color: rgba(15, 107, 99, 0.38);
-  background: #f2fbf8;
+  border-color: rgba(15, 107, 99, 0.26);
+  background: var(--surface);
 }
 
 .overview-card > span:not(.overview-icon):not(.overview-countline):not(.overview-meta) {
@@ -787,7 +786,6 @@ select:focus-visible {
 
 .overview-card-static {
   cursor: default;
-  border-left-color: #76837f;
 }
 
 .workspace {
