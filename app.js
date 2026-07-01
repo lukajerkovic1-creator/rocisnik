@@ -25,6 +25,19 @@
     { value: "7d", label: "7 dana prije", reminders: [{ id: "7d", label: "7 dana prije", minutesBefore: 7 * 24 * 60 }] }
   ];
   const DEFAULT_HEARING_STATUS = "zakazano";
+  const AUDIT_FIELDS = [
+    { key: "plaintiff", label: "Tužitelj" },
+    { key: "defendant", label: "Tuženik" },
+    { key: "caseNumber", label: "Broj predmeta" },
+    { key: "hearingDateTime", label: "Datum i sat ročišta" },
+    { key: "status", label: "Status ročišta" },
+    { key: "reminders", label: "Podsjetnici" },
+    { key: "reminderDisabled", label: "Podsjetnici isključeni" },
+    { key: "disputeSubject", label: "Predmet spora" },
+    { key: "disputeValue", label: "Vrijednost predmeta spora" },
+    { key: "specificity", label: "Specifičnost" },
+    { key: "deletedAt", label: "Brisanje" }
+  ];
   const HEARING_STATUSES = [
     { value: "zakazano", label: "Zakazano", className: "status-scheduled" },
     { value: "odgođeno", label: "Odgođeno", className: "status-postponed" },
@@ -203,6 +216,9 @@
     detailsDisputeSubject: document.getElementById("detailsDisputeSubject"),
     detailsDisputeValue: document.getElementById("detailsDisputeValue"),
     detailsSpecificity: document.getElementById("detailsSpecificity"),
+    historyPanel: document.getElementById("historyPanel"),
+    historyCount: document.getElementById("historyCount"),
+    detailsHistory: document.getElementById("detailsHistory"),
     editButton: document.getElementById("editButton"),
     restoreButton: document.getElementById("restoreButton"),
     deleteButton: document.getElementById("deleteButton")
@@ -216,6 +232,7 @@
   function init() {
     registerServiceWorker();
     state.hearings = loadHearings();
+    if (state.hearings.length) saveHearings();
     state.visibleStart = weekStart;
     state.visibleEnd = getDefaultVisibleEnd();
     fillMonthSelect();
@@ -444,7 +461,7 @@
     const hearingDateTime = getRequiredImportString(item.hearingDateTime);
     if (!id || !plaintiff || !defendant || !caseNumber || Number.isNaN(new Date(hearingDateTime).getTime())) return null;
 
-    return {
+    const normalized = {
       id,
       plaintiff,
       defendant,
@@ -464,6 +481,14 @@
       createdAt: getOptionalImportString(item.createdAt),
       updatedAt: getOptionalImportString(item.updatedAt)
     };
+    const withHistory = {
+      ...normalized,
+      history: normalizeHistory(item.history, normalized, "legacy-imported")
+    };
+    return addHistoryEvent(withHistory, "imported", withHistory, withHistory, {
+      changedFields: [],
+      note: "Zapis je uvezen iz JSON backup-a."
+    });
   }
 
   function getRequiredImportString(value) {
@@ -922,6 +947,95 @@
     return count === 1 ? "1 ročište" : `${count} ročišta`;
   }
 
+  function createHistoryEvent(eventType, previousHearing, nextHearing, options = {}) {
+    const changedFields = options.changedFields || getChangedFields(previousHearing, nextHearing);
+    const previousValues = {};
+    const newValues = {};
+
+    changedFields.forEach((field) => {
+      previousValues[field] = previousHearing ? getComparableValue(previousHearing, field) : "";
+      newValues[field] = nextHearing ? getComparableValue(nextHearing, field) : "";
+    });
+
+    return {
+      eventId: createId(),
+      eventType,
+      timestamp: options.timestamp || new Date().toISOString(),
+      actor: "local-user",
+      changedFields,
+      previousValues,
+      newValues,
+      note: options.note || ""
+    };
+  }
+
+  function addHistoryEvent(hearing, eventType, previousHearing, nextHearing, options = {}) {
+    const changedFields = options.changedFields || getChangedFields(previousHearing, nextHearing);
+    if (!changedFields.length && !["created", "legacy-imported", "imported"].includes(eventType)) return nextHearing;
+
+    return {
+      ...nextHearing,
+      history: [
+        ...normalizeHistory(hearing.history, hearing),
+        createHistoryEvent(eventType, previousHearing, nextHearing, { ...options, changedFields })
+      ]
+    };
+  }
+
+  function getChangedFields(previousHearing, nextHearing) {
+    return AUDIT_FIELDS
+      .map((field) => field.key)
+      .filter((key) => getComparableValue(previousHearing, key) !== getComparableValue(nextHearing, key));
+  }
+
+  function getComparableValue(hearing, key) {
+    if (!hearing) return "";
+    if (key === "status") return normalizeStatus(hearing.status);
+    if (key === "reminders") {
+      return JSON.stringify(normalizeReminders(hearing.reminders).map((reminder) => reminder.minutesBefore).sort((a, b) => a - b));
+    }
+    if (key === "reminderDisabled") return Boolean(hearing.reminderDisabled);
+    return typeof hearing[key] === "string" ? hearing[key].trim() : hearing[key] || "";
+  }
+
+  function normalizeHistory(history, hearing, fallbackType = "legacy-imported") {
+    const normalized = Array.isArray(history)
+      ? history
+        .filter((event) => event && typeof event === "object" && typeof event.eventType === "string")
+        .map((event) => ({
+          eventId: typeof event.eventId === "string" && event.eventId ? event.eventId : createId(),
+          eventType: event.eventType,
+          timestamp: getValidTimestamp(event.timestamp) || getValidTimestamp(hearing?.updatedAt) || new Date().toISOString(),
+          actor: event.actor || "local-user",
+          changedFields: Array.isArray(event.changedFields) ? event.changedFields.filter((field) => typeof field === "string") : [],
+          previousValues: isPlainObject(event.previousValues) ? event.previousValues : {},
+          newValues: isPlainObject(event.newValues) ? event.newValues : {},
+          note: typeof event.note === "string" ? event.note : ""
+        }))
+      : [];
+
+    if (normalized.length) return normalized;
+
+    return [
+      createHistoryEvent(fallbackType, null, hearing, {
+        timestamp: getValidTimestamp(hearing?.createdAt) || getValidTimestamp(hearing?.updatedAt) || new Date().toISOString(),
+        note: fallbackType === "legacy-imported"
+          ? "Zapis je postojao prije uvođenja povijesti izmjena."
+          : "Zapis je uvezen bez prethodne povijesti."
+      })
+    ];
+  }
+
+  function getValidTimestamp(value) {
+    if (typeof value !== "string") return "";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+  }
+
+  function isPlainObject(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
     clearValidation();
@@ -946,7 +1060,7 @@
       state.hearings = state.hearings.map((hearing) => {
         if (hearing.id !== state.editingId) return hearing;
         const resetReminderState = shouldResetReminderEvents(hearing, data);
-        return {
+        const nextHearing = {
           ...hearing,
           ...data,
           reminderEvents: resetReminderState ? {} : normalizeReminderEvents(hearing.reminderEvents),
@@ -954,6 +1068,10 @@
           reminderSnoozedUntil: resetReminderState || data.reminderDisabled ? "" : hearing.reminderSnoozedUntil || "",
           updatedAt: now
         };
+        const changedFields = getChangedFields(hearing, nextHearing);
+        if (!changedFields.length) return hearing;
+        const eventType = changedFields.includes("status") ? "status-changed" : "edited";
+        return addHistoryEvent(hearing, eventType, hearing, nextHearing, { changedFields });
       });
       state.selectedId = state.editingId;
       showFormMessage("Ročište je ažurirano.", "success");
@@ -967,7 +1085,10 @@
         createdAt: now,
         updatedAt: now
       };
-      state.hearings.push(hearing);
+      state.hearings.push({
+        ...hearing,
+        history: [createHistoryEvent("created", null, hearing, { timestamp: now, note: "Zapis je stvoren." })]
+      });
       state.selectedId = null;
       showFormMessage("Ročište je dodano.", "success");
     }
@@ -1347,6 +1468,7 @@
     els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
     els.detailsDisputeValue.textContent = hearing.disputeValue || "Nije uneseno";
     els.detailsSpecificity.textContent = hearing.specificity || "Nije uneseno";
+    renderHistory(hearing);
 
     const deleted = isDeletedHearing(hearing);
     els.deletedStatus.hidden = !deleted;
@@ -1354,6 +1476,100 @@
     els.editButton.hidden = deleted;
     els.deleteButton.hidden = deleted;
     els.restoreButton.hidden = !deleted;
+  }
+
+  function renderHistory(hearing) {
+    const history = normalizeHistory(hearing.history, hearing)
+      .slice()
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    els.historyCount.textContent = `(${history.length})`;
+    els.detailsHistory.replaceChildren();
+
+    history.forEach((event) => {
+      const item = document.createElement("article");
+      item.className = "history-item";
+
+      const title = document.createElement("strong");
+      title.textContent = getHistoryEventTitle(event);
+
+      const time = document.createElement("time");
+      time.dateTime = event.timestamp;
+      time.textContent = formatLongDateTime(new Date(event.timestamp));
+
+      const descriptions = getHistoryDescriptions(event);
+      const list = document.createElement("ul");
+      descriptions.forEach((description) => {
+        const row = document.createElement("li");
+        row.textContent = description;
+        list.append(row);
+      });
+
+      item.append(title, time, list);
+      els.detailsHistory.append(item);
+    });
+  }
+
+  function getHistoryEventTitle(event) {
+    const titles = {
+      created: "Zapis stvoren",
+      "legacy-imported": "Zapis iz ranije verzije",
+      imported: "Zapis uvezen",
+      edited: "Zapis uređen",
+      "status-changed": "Status promijenjen",
+      deleted: "Zapis obrisan",
+      restored: "Zapis vraćen"
+    };
+    return titles[event.eventType] || "Izmjena zapisa";
+  }
+
+  function getHistoryDescriptions(event) {
+    if (event.eventType === "created") return ["Zapis je stvoren s početnim podacima."];
+    if (event.eventType === "legacy-imported") return [event.note || "Zapis je postojao prije uvođenja povijesti izmjena."];
+    if (event.eventType === "imported") return [event.note || "Zapis je uvezen iz JSON backup-a."];
+    if (event.eventType === "deleted") return ["Zapis je obrisan iz aktivnog prikaza."];
+    if (event.eventType === "restored") return ["Zapis je vraćen u aktivne zapise."];
+
+    const descriptions = event.changedFields.map((field) => formatHistoryFieldChange(field, event.previousValues?.[field], event.newValues?.[field]));
+    return descriptions.length ? descriptions : [event.note || "Zapis je ažuriran."];
+  }
+
+  function formatHistoryFieldChange(field, previousValue, newValue) {
+    const label = getAuditFieldLabel(field);
+    const previousText = formatAuditValue(field, previousValue);
+    const newText = formatAuditValue(field, newValue);
+
+    if (field === "status") return `Status promijenjen iz '${previousText}' u '${newText}'.`;
+    if (field === "hearingDateTime") return `Datum ročišta promijenjen s ${previousText} na ${newText}.`;
+    if (field === "reminders") return `Podsjetnici promijenjeni iz '${previousText}' u '${newText}'.`;
+    if (field === "reminderDisabled") return `Postavka podsjetnika promijenjena iz '${previousText}' u '${newText}'.`;
+    return `${label} promijenjeno iz '${previousText}' u '${newText}'.`;
+  }
+
+  function getAuditFieldLabel(field) {
+    return AUDIT_FIELDS.find((item) => item.key === field)?.label || field;
+  }
+
+  function formatAuditValue(field, value) {
+    if (value === undefined || value === null || value === "") return "nije uneseno";
+    if (field === "status") return getStatusLabel(value);
+    if (field === "hearingDateTime" || field === "deletedAt") {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "nije uneseno" : formatLongDateTime(date);
+    }
+    if (field === "reminders") return formatAuditReminders(value);
+    if (field === "reminderDisabled") return value ? "isključeno" : "uključeno";
+    return String(value);
+  }
+
+  function formatAuditReminders(value) {
+    try {
+      const minutes = Array.isArray(value) ? value : JSON.parse(value || "[]");
+      if (!minutes.length) return "bez podsjetnika";
+      return minutes.map((minute) => formatReminderOffset(Number(minute))).join(", ");
+    } catch (error) {
+      return "bez podsjetnika";
+    }
   }
 
   function updateFormMode() {
@@ -1394,7 +1610,13 @@
     const now = new Date().toISOString();
     state.hearings = state.hearings.map((item) =>
       item.id === hearing.id
-        ? { ...item, deletedAt: now, deletedReason: item.deletedReason || "", updatedAt: now }
+        ? addHistoryEvent(
+          item,
+          "deleted",
+          item,
+          { ...item, deletedAt: now, deletedReason: item.deletedReason || "", updatedAt: now },
+          { changedFields: ["deletedAt"], timestamp: now, note: "Zapis je obrisan." }
+        )
         : item
     );
     state.selectedId = state.showDeleted ? hearing.id : null;
@@ -1417,7 +1639,14 @@
     state.hearings = state.hearings.map((item) => {
       if (item.id !== hearing.id) return item;
       const { deletedAt, deletedReason, deleted, isDeleted, ...restored } = item;
-      return { ...restored, updatedAt: now };
+      const restoredHearing = { ...restored, updatedAt: now };
+      return addHistoryEvent(
+        item,
+        "restored",
+        item,
+        restoredHearing,
+        { changedFields: ["deletedAt"], timestamp: now, note: "Zapis je vraćen." }
+      );
     });
     state.selectedId = hearing.id;
     saveHearings();
@@ -1825,15 +2054,21 @@
       if (!Array.isArray(parsed)) return [];
       return parsed
         .filter((item) => item && item.id && item.hearingDateTime)
-        .map((item) => ({
-          ...item,
-          status: normalizeStatus(item.status),
-          reminders: normalizeReminders(item.reminders),
-          reminderDismissedAt: getOptionalImportString(item.reminderDismissedAt),
-          reminderSnoozedUntil: getOptionalImportString(item.reminderSnoozedUntil),
-          reminderDisabled: Boolean(item.reminderDisabled),
-          reminderEvents: normalizeReminderEvents(item.reminderEvents)
-        }));
+        .map((item) => {
+          const normalized = {
+            ...item,
+            status: normalizeStatus(item.status),
+            reminders: normalizeReminders(item.reminders),
+            reminderDismissedAt: getOptionalImportString(item.reminderDismissedAt),
+            reminderSnoozedUntil: getOptionalImportString(item.reminderSnoozedUntil),
+            reminderDisabled: Boolean(item.reminderDisabled),
+            reminderEvents: normalizeReminderEvents(item.reminderEvents)
+          };
+          return {
+            ...normalized,
+            history: normalizeHistory(item.history, normalized, "legacy-imported")
+          };
+        });
     } catch (error) {
       return [];
     }

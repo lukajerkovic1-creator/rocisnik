@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
+const os = require("node:os");
 const path = require("node:path");
 
 const { chromium } = require("playwright");
@@ -120,6 +121,9 @@ async function run() {
     let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings.length, 1);
     assert.equal(hearings[0].status, "zakazano");
+    assert.equal(hearings[0].history.length, 1);
+    assert.equal(hearings[0].history[0].eventType, "created");
+    assert.ok(hearings[0].history[0].eventId);
     assert.deepEqual(hearings[0].reminders.map((reminder) => reminder.minutesBefore).sort((a, b) => a - b), [30, 120]);
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
     await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
@@ -270,13 +274,18 @@ async function run() {
     await page.click(".search-result-button");
     await assertVisibleText(page, "#detailsParties", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#detailsStatus", "Zakazano");
+    await openHistoryPanel(page);
+    await assertVisibleText(page, "#detailsHistory", "Zapis stvoren");
 
     await page.click("#editButton");
     await page.selectOption("#hearingStatus", "otkazano");
     await page.click("#submitButton");
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings[0].status, "otkazano");
+    assert.ok(hearings[0].history.some((event) => event.eventType === "status-changed" && event.changedFields.includes("status")));
     await assertVisibleText(page, "#detailsStatus", "Otkazano");
+    await openHistoryPanel(page);
+    await assertVisibleText(page, "#detailsHistory", "Status promijenjen");
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
 
     await page.selectOption("#filterStatus", "otkazano");
@@ -286,14 +295,18 @@ async function run() {
     await page.click("#deleteButton");
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.ok(hearings[0].deletedAt, "Soft-delete should keep a deletedAt timestamp");
+    assert.ok(hearings[0].history.some((event) => event.eventType === "deleted"));
     assert.equal(await page.locator("#detailsContent").isHidden(), true);
 
     await page.check("#showDeletedToggle");
     await page.click(".hearing-button.deleted");
     await assertVisibleText(page, "#deletedStatus", "Obrisano");
+    await openHistoryPanel(page);
+    await assertVisibleText(page, "#detailsHistory", "Zapis obrisan");
     await page.click("#restoreButton");
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(Boolean(hearings[0].deletedAt), false);
+    assert.ok(hearings[0].history.some((event) => event.eventType === "restored"));
 
     await page.evaluate((key) => localStorage.removeItem(key), LAST_BACKUP_AT_KEY);
     await page.uncheck("#showDeletedToggle");
@@ -304,8 +317,41 @@ async function run() {
     await page.click("#backupReminderExportButton");
     const download = await downloadPromise;
     assert.match(download.suggestedFilename(), /^rocisnik-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    const backupPath = await download.path();
+    const exportedBackup = JSON.parse(await fs.readFile(backupPath, "utf8"));
+    assert.ok(exportedBackup.hearings[0].history.some((event) => event.eventType === "created"));
+    assert.ok(exportedBackup.hearings[0].history.some((event) => event.eventType === "restored"));
     assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY));
     assert.equal(await page.locator("#backupReminder").isHidden(), true);
+
+    const importDir = await fs.mkdtemp(path.join(os.tmpdir(), "rocisnik-import-"));
+    const importRecord = buildStoredHearing("import-history-record", addDays(today, 3), "Import Povijest", "Test Osoba");
+    importRecord.history = [{
+      eventId: "existing-import-history",
+      eventType: "created",
+      timestamp: new Date().toISOString(),
+      actor: "local-user",
+      changedFields: ["plaintiff"],
+      previousValues: {},
+      newValues: { plaintiff: "Import Povijest" },
+      note: "Postojeća povijest"
+    }];
+    const importPath = path.join(importDir, "rocisnik-import-history.json");
+    await fs.writeFile(importPath, JSON.stringify({
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      metadata: { appName: "Ročišnik", storageKey: STORAGE_KEY },
+      hearings: [importRecord]
+    }), "utf8");
+    await page.setInputFiles("#importJsonFile", importPath);
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Uvoz je dovršen."));
+    await assertVisibleText(page, "#backupMessage", "Uvoz je dovršen.");
+    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    const imported = hearings.find((hearing) => hearing.id === "import-history-record");
+    assert.ok(imported, "Imported hearing should be saved");
+    assert.ok(imported.history.some((event) => event.eventId === "existing-import-history"));
+    assert.ok(imported.history.some((event) => event.eventType === "imported"));
+    await fs.rm(importDir, { recursive: true, force: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -379,6 +425,11 @@ async function assertVisibleText(page, selector, expectedText) {
   await assert.equal(await locator.isVisible(), true, `${selector} should be visible`);
   const text = await locator.innerText();
   assert.ok(text.includes(expectedText), `${selector} should contain "${expectedText}", got "${text}"`);
+}
+
+async function openHistoryPanel(page) {
+  const isOpen = await page.locator("#historyPanel").evaluate((element) => element.open);
+  if (!isOpen) await page.click("#historyPanel summary");
 }
 
 async function assertSearchIncludes(page, expectedText) {
