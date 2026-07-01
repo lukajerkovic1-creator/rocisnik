@@ -277,6 +277,25 @@ async function run() {
     await assertVisibleText(page, "#summaryActiveCount", "1");
     await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
     assert.equal(await page.locator(".hearing-button .row-more").count(), 1);
+    assert.equal(await page.locator(".hearing-date-inline").first().evaluate((element) => {
+      const text = element.textContent.trim();
+      return /^\d{1,2}\. \d{1,2}\. \d{4}\.$/.test(text) && !text.toLowerCase().includes("srpn");
+    }), true);
+    assert.deepEqual(await page.locator(".hearing-button .row-more").first().evaluate((element) => {
+      const style = getComputedStyle(element);
+      const iconStyle = getComputedStyle(element, "::before");
+      return {
+        text: element.textContent.trim(),
+        background: style.backgroundColor,
+        iconContent: iconStyle.content,
+        iconMask: iconStyle.maskImage
+      };
+    }), {
+      text: "",
+      background: "rgba(0, 0, 0, 0)",
+      iconContent: '""',
+      iconMask: "radial-gradient(circle at 50% 2px, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 2.4px), radial-gradient(circle at 50% 8px, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 2.4px), radial-gradient(circle at 50% 14px, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 2.4px)"
+    });
     assert.equal(await page.locator(".hearing-button").first().evaluate((element) => {
       const height = element.getBoundingClientRect().height;
       return height >= 50 && height <= 64;

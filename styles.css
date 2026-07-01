@@ -1712,20 +1712,28 @@ select.invalid {
 .row-more {
   display: inline-grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
+  width: 18px;
+  height: 26px;
   color: #6a7774;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 1px;
   line-height: 1;
+}
+
+.row-more::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: radial-gradient(circle at 50% 2px, #000 2px, transparent 2.4px),
+    radial-gradient(circle at 50% 8px, #000 2px, transparent 2.4px),
+    radial-gradient(circle at 50% 14px, #000 2px, transparent 2.4px);
+  mask: radial-gradient(circle at 50% 2px, #000 2px, transparent 2.4px),
+    radial-gradient(circle at 50% 8px, #000 2px, transparent 2.4px),
+    radial-gradient(circle at 50% 14px, #000 2px, transparent 2.4px);
 }
 
 .hearing-button:hover .row-more,
 .hearing-button.selected .row-more {
-  color: var(--accent-strong);
-  background: rgba(15, 107, 99, 0.08);
+  color: #41514e;
 }
 
 .empty-day {

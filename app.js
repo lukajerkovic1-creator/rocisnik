@@ -1977,7 +1977,7 @@
     const date = new Date(hearing.hearingDateTime);
     const showPastBadge = Boolean(options.markPast && isPastHearing(hearing));
     const subject = hearing.disputeSubject || hearing.specificity || "Bez dodatnog opisa";
-    const dateLabel = `${date.getDate()}. ${MONTH_NAMES_NOMINATIVE[date.getMonth()]} ${date.getFullYear()}.`;
+    const dateLabel = formatNumericDate(date);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "hearing-button";
@@ -1999,7 +1999,7 @@
         ${createStatusBadgeHtml(hearing.status)}
         ${showPastBadge ? `<span class="past-badge">Prošlo</span>` : ""}
         ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
-        <span class="row-more" aria-hidden="true">...</span>
+        <span class="row-more" aria-hidden="true"></span>
       </span>
     `;
     button.addEventListener("click", () => {
@@ -2927,6 +2927,10 @@
 
   function formatLocalDateTime(date) {
     return `${date.getDate()}. ${date.getMonth() + 1}. ${date.getFullYear()}. ${formatTime(date)}`;
+  }
+
+  function formatNumericDate(date) {
+    return `${date.getDate()}. ${date.getMonth() + 1}. ${date.getFullYear()}.`;
   }
 
   function toDateKey(date) {
