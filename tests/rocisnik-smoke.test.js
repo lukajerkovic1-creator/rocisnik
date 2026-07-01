@@ -115,9 +115,13 @@ async function run() {
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
     await assertScheduleViewActive(page, "next30");
     await assertVisibleText(page, "#summaryTodayCount", "0");
+    await assertVisibleText(page, "#summaryTodayMeta", "0 nadolazi");
     await assertVisibleText(page, "#summaryWeekCount", "0");
+    await assertVisibleText(page, "#summaryWeekMeta", "0 nadolazećih");
     await assertVisibleText(page, "#summaryNext30Count", "0");
+    await assertVisibleText(page, "#summaryNext30Meta", "0 odgođeno");
     await assertVisibleText(page, "#summaryActiveCount", "0");
+    await assertVisibleText(page, "#summaryActiveMeta", "zakazano");
     await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
     await assertVisibleText(page, ".schedule-empty", "Dodajte prvo ročište kako biste počeli voditi osobni raspored.");
     await assertVisibleText(page, ".schedule-empty", "Dodaj prvo ročište");
@@ -183,6 +187,7 @@ async function run() {
     await assertVisibleText(page, "#formMessage", "Ročište je dodano.");
     await assertVisibleText(page, "#summaryActiveCount", "1");
     await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
+    assert.equal(await page.locator(".hearing-button .row-more").count(), 1);
     await page.click("#quickAddButton");
     assert.equal(await page.locator("#plaintiff").evaluate((input) => document.activeElement === input), true);
 

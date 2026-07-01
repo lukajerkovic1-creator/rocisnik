@@ -722,22 +722,35 @@ select:focus-visible {
   background: #f2fbf8;
 }
 
-.overview-card > span:not(.overview-icon) {
+.overview-card > span:not(.overview-icon):not(.overview-countline):not(.overview-meta) {
   grid-area: label;
   color: #33413f;
   font-size: 13px;
   font-weight: 780;
 }
 
-.overview-card strong {
+.overview-countline {
   grid-area: count;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.overview-card strong {
   color: var(--accent-strong);
   font-size: 26px;
   line-height: 1;
   font-weight: 800;
 }
 
-.overview-card small {
+.overview-countline small {
+  color: #43524f;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.overview-meta {
   grid-area: meta;
   color: var(--muted);
   font-size: 12px;
@@ -1577,6 +1590,25 @@ select.invalid {
   gap: 5px;
   justify-content: flex-end;
   align-items: center;
+}
+
+.row-more {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: #6a7774;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.hearing-button:hover .row-more,
+.hearing-button.selected .row-more {
+  color: var(--accent-strong);
+  background: rgba(15, 107, 99, 0.08);
 }
 
 .empty-day {

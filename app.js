@@ -142,9 +142,13 @@
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
     summaryTodayCount: document.getElementById("summaryTodayCount"),
+    summaryTodayMeta: document.getElementById("summaryTodayMeta"),
     summaryWeekCount: document.getElementById("summaryWeekCount"),
+    summaryWeekMeta: document.getElementById("summaryWeekMeta"),
     summaryNext30Count: document.getElementById("summaryNext30Count"),
+    summaryNext30Meta: document.getElementById("summaryNext30Meta"),
     summaryActiveCount: document.getElementById("summaryActiveCount"),
+    summaryActiveMeta: document.getElementById("summaryActiveMeta"),
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     settingsButton: document.getElementById("settingsButton"),
@@ -1799,11 +1803,38 @@
       const date = new Date(hearing.hearingDateTime);
       return !Number.isNaN(date.getTime());
     });
+    const now = new Date();
+    const todayHearings = validActiveHearings.filter((hearing) => isToday(new Date(hearing.hearingDateTime)));
+    const weekHearings = validActiveHearings.filter((hearing) => isThisWeek(new Date(hearing.hearingDateTime)));
+    const next30Hearings = validActiveHearings.filter((hearing) => isWithinNextDays(new Date(hearing.hearingDateTime), 30));
+    const activeStatusHearings = activeHearings.filter((hearing) => normalizeStatus(hearing.status) !== "otkazano");
 
-    els.summaryTodayCount.textContent = String(validActiveHearings.filter((hearing) => isToday(new Date(hearing.hearingDateTime))).length);
-    els.summaryWeekCount.textContent = String(validActiveHearings.filter((hearing) => isThisWeek(new Date(hearing.hearingDateTime))).length);
-    els.summaryNext30Count.textContent = String(validActiveHearings.filter((hearing) => isWithinNextDays(new Date(hearing.hearingDateTime), 30)).length);
-    els.summaryActiveCount.textContent = String(activeHearings.length);
+    els.summaryTodayCount.textContent = String(todayHearings.length);
+    els.summaryTodayMeta.textContent = `${countUpcoming(todayHearings, now)} nadolazi · ${countPast(todayHearings, now)} prošlo`;
+    els.summaryWeekCount.textContent = String(weekHearings.length);
+    els.summaryWeekMeta.textContent = `${countUpcoming(weekHearings, now)} nadolazećih · ${countPast(weekHearings, now)} prošlo`;
+    els.summaryNext30Count.textContent = String(next30Hearings.length);
+    els.summaryNext30Meta.textContent = `${countUpcoming(next30Hearings, now)} nadolazećih · ${countByStatus(next30Hearings, "odgođeno")} odgođeno`;
+    els.summaryActiveCount.textContent = String(activeStatusHearings.length);
+    els.summaryActiveMeta.textContent = "zakazano, odgođeno, održano";
+  }
+
+  function countUpcoming(hearings, now) {
+    return hearings.filter((hearing) => {
+      const status = normalizeStatus(hearing.status);
+      return status !== "otkazano" && status !== "održano" && new Date(hearing.hearingDateTime) >= now;
+    }).length;
+  }
+
+  function countPast(hearings, now) {
+    return hearings.filter((hearing) => {
+      const status = normalizeStatus(hearing.status);
+      return status === "održano" || new Date(hearing.hearingDateTime) < now;
+    }).length;
+  }
+
+  function countByStatus(hearings, status) {
+    return hearings.filter((hearing) => normalizeStatus(hearing.status) === status).length;
   }
 
   function renderCalendar() {
@@ -1963,6 +1994,7 @@
         ${createStatusBadgeHtml(hearing.status)}
         ${showPastBadge ? `<span class="past-badge">Prošlo</span>` : ""}
         ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
+        <span class="row-more" aria-hidden="true">...</span>
       </span>
     `;
     button.addEventListener("click", () => {
