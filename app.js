@@ -113,6 +113,7 @@
     selectedId: null,
     editingId: null,
     currentMobileView: "schedule",
+    currentUtilityView: "search",
     scheduleView: "next30",
     scheduleToolsOpen: false,
     encryptedBackupAction: "",
@@ -173,8 +174,10 @@
     notificationStatus: document.getElementById("notificationStatus"),
     remindersList: document.getElementById("remindersList"),
     remindersPanel: document.querySelector(".reminders-panel"),
+    entryPanel: document.querySelector(".entry-panel"),
+    searchPanel: document.querySelector(".search-panel"),
     utilityButtons: Array.from(document.querySelectorAll("[data-utility-view]")),
-    utilityReminderCount: document.getElementById("utilityReminderCount"),
+    utilityReminderCounts: Array.from(document.querySelectorAll(".utility-reminder-count")),
     exportJsonButton: document.getElementById("exportJsonButton"),
     exportEncryptedButton: document.getElementById("exportEncryptedButton"),
     importJsonButton: document.getElementById("importJsonButton"),
@@ -373,7 +376,7 @@
     els.clearSelectionButton.addEventListener("click", () => {
       state.selectedId = null;
       resetForm();
-      setMobileView("form");
+      setMobileView("details");
       render();
     });
     els.quickAddButton.addEventListener("click", goToNewHearing);
@@ -1284,17 +1287,23 @@
   }
 
   function updateUtilityTabs() {
-    const activeView = state.currentMobileView === "form" ? "form" : "search";
+    const activeView = state.currentUtilityView;
+    document.body.dataset.utilityView = activeView;
+    els.entryPanel.classList.toggle("utility-active", activeView === "form");
+    els.searchPanel.classList.toggle("utility-active", activeView === "search");
     els.utilityButtons.forEach((button) => {
       const isActive = button.dataset.utilityView === activeView;
       button.classList.toggle("active", isActive);
       button.setAttribute("aria-current", isActive ? "page" : "false");
     });
-    els.utilityReminderCount.textContent = String(state.activeReminders.length);
+    els.utilityReminderCounts.forEach((count) => {
+      count.textContent = String(state.activeReminders.length);
+    });
   }
 
   function openUtilityView(view) {
     if (view === "form") {
+      state.currentUtilityView = "form";
       goToNewHearing();
       return;
     }
@@ -1303,6 +1312,7 @@
       els.enableNotificationsButton.focus({ preventScroll: true });
       return;
     }
+    state.currentUtilityView = "search";
     setMobileView("search");
     render();
     els.filters.plaintiff.focus();
@@ -1573,6 +1583,7 @@
     }
 
     const now = new Date().toISOString();
+    const wasEditing = Boolean(state.editingId);
 
     if (state.editingId) {
       state.hearings = state.hearings.map((hearing) => {
@@ -1613,6 +1624,7 @@
 
     saveHearings();
     resetForm({ keepMessage: true });
+    if (wasEditing) state.currentUtilityView = "search";
     setMobileView(state.selectedId ? "details" : "schedule");
     render();
     checkDueReminders();
@@ -1958,6 +1970,7 @@
   }
 
   function goToNewHearing() {
+    state.currentUtilityView = "form";
     resetForm();
     setMobileView("form");
     render();
@@ -1979,6 +1992,9 @@
     const showPastBadge = Boolean(options.markPast && isPastHearing(hearing));
     const subject = hearing.disputeSubject || hearing.specificity || "Bez dodatnog opisa";
     const dateLabel = formatNumericDate(date);
+    const reminderIndicator = hasActiveReminderIndicator(hearing)
+      ? `<span class="hearing-reminder-indicator" title="Ima podsjetnik" aria-hidden="true"></span>`
+      : "";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "hearing-button";
@@ -1992,7 +2008,10 @@
         <span class="hearing-time">${formatTime(date)}</span>
       </span>
       <span class="hearing-body">
-        <span class="hearing-case">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}</span>
+        <span class="hearing-case-line">
+          <span class="hearing-case">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}</span>
+          ${reminderIndicator}
+        </span>
         <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
       </span>
       <span class="hearing-subject">${escapeHtml(subject)}</span>
@@ -2009,6 +2028,10 @@
       render();
     });
     return button;
+  }
+
+  function hasActiveReminderIndicator(hearing) {
+    return canCreateReminder(hearing) && normalizeReminders(hearing.reminders).length > 0;
   }
 
   function createSearchResultButton(hearing) {
@@ -2271,8 +2294,10 @@
     els.fields.disputeValue.value = hearing.disputeValue;
     els.fields.specificity.value = hearing.specificity;
     clearValidation();
+    state.currentUtilityView = "form";
     setMobileView("form");
     updateFormMode();
+    updateUtilityTabs();
     els.fields.plaintiff.focus();
   }
 

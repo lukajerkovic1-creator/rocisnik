@@ -125,11 +125,11 @@ async function run() {
     await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
     await assertVisibleText(page, ".schedule-empty", "Dodajte prvo ročište kako biste počeli voditi osobni raspored.");
     await assertVisibleText(page, ".schedule-empty", "Dodaj prvo ročište");
-    await assertVisibleText(page, ".utility-tabs", "Pretraživanje");
-    await assertVisibleText(page, ".utility-tabs", "Novo ročište");
-    await assertVisibleText(page, ".utility-tabs", "Podsjetnici");
+    await assertVisibleText(page, ".search-panel .utility-tabs", "Pretraživanje");
+    await assertVisibleText(page, ".search-panel .utility-tabs", "Novo ročište");
+    await assertVisibleText(page, ".search-panel .utility-tabs", "Podsjetnici");
     const desktopLayout = await page.evaluate(() => {
-      const utilityTabs = document.querySelector(".utility-tabs")?.getBoundingClientRect();
+      const utilityTabs = document.querySelector(".search-panel .utility-tabs")?.getBoundingClientRect();
       const searchPanel = document.querySelector(".search-panel")?.getBoundingClientRect();
       const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
@@ -162,7 +162,7 @@ async function run() {
       const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
       const quickAdd = document.querySelector(".quick-add-button")?.getBoundingClientRect();
-      const reminderIcon = document.querySelector('.utility-tab[data-utility-view="reminders"] .utility-tab-icon svg')?.getBoundingClientRect();
+      const reminderIcon = document.querySelector('.search-panel .utility-tab[data-utility-view="reminders"] .utility-tab-icon svg')?.getBoundingClientRect();
       const backupIconTargets = ["#exportJsonButton", "#importJsonButton", "#exportEncryptedButton"];
       const backupButtonsHaveIcons = backupIconTargets.every((selector) => {
         const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
@@ -277,6 +277,14 @@ async function run() {
     await assertVisibleText(page, "#summaryActiveCount", "1");
     await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
     assert.equal(await page.locator(".hearing-button .row-more").count(), 1);
+    assert.equal(await page.locator(".hearing-reminder-indicator").count(), 1);
+    assert.equal(await page.locator(".hearing-reminder-indicator").first().evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return box.width === 13 && box.height === 13 &&
+        style.backgroundColor === "rgb(217, 71, 71)" &&
+        style.maskImage !== "none";
+    }), true);
     assert.equal(await page.locator(".hearing-date-inline").first().evaluate((element) => {
       const text = element.textContent.trim();
       return /^\d{1,2}\. \d{1,2}\. \d{4}\.$/.test(text) && !text.toLowerCase().includes("srpn");
@@ -313,7 +321,7 @@ async function run() {
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
     await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#remindersList", "2 sata prije");
-    await assertVisibleText(page, "#utilityReminderCount", "1");
+    await assertVisibleText(page, ".utility-view .utility-reminder-count", "1");
 
     await page.click('[data-reminder-action="seen"]');
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
