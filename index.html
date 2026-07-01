@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=48">
+    <link rel="stylesheet" href="styles.css?v=49">
   </head>
   <body>
     <div class="app-shell">
@@ -335,7 +335,12 @@
             <button class="utility-tab active" type="button" data-utility-view="search">Pretraživanje</button>
             <button class="utility-tab" type="button" data-utility-view="form">Novo ročište</button>
             <button class="utility-tab" type="button" data-utility-view="reminders">
-              <span aria-hidden="true">♢</span>
+              <span class="utility-tab-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                  <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+                </svg>
+              </span>
               Podsjetnici
               <strong id="utilityReminderCount">0</strong>
             </button>
@@ -622,6 +627,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=48"></script>
+    <script src="app.js?v=49"></script>
   </body>
 </html>

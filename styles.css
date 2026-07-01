@@ -867,6 +867,24 @@ select:focus-visible {
   background: var(--accent);
 }
 
+.utility-tab-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+.utility-tab-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .utility-tab strong {
   display: inline-grid;
   place-items: center;
