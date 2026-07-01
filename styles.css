@@ -1805,6 +1805,81 @@ select.invalid {
   font-size: 13px;
 }
 
+@media (min-width: 761px) {
+  .side-column .details-panel {
+    padding: 14px 16px;
+    max-height: 390px;
+  }
+
+  .side-column .details-panel .panel-heading {
+    margin-bottom: 10px;
+  }
+
+  .side-column .details-panel .panel-heading h2 {
+    font-size: 16px;
+  }
+
+  .side-column .details-panel .panel-heading p {
+    font-size: 12px;
+  }
+
+  .side-column .case-title {
+    padding-bottom: 10px;
+  }
+
+  .side-column .case-title span {
+    margin-bottom: 6px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .side-column .case-title h3 {
+    font-size: 19px;
+    line-height: 1.12;
+  }
+
+  .side-column .detail-actions {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .side-column .detail-actions .secondary-button,
+  .side-column .detail-actions .danger-button {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .side-column .details-list {
+    gap: 7px;
+    margin-top: 10px;
+  }
+
+  .side-column .details-list div {
+    gap: 1px;
+    padding-bottom: 5px;
+  }
+
+  .side-column .details-list dt {
+    font-size: 11px;
+  }
+
+  .side-column .details-list dd {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .side-column .history-panel {
+    margin-top: 10px;
+  }
+
+  .side-column .history-panel summary {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
