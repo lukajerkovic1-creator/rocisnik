@@ -161,6 +161,14 @@ async function run() {
       const statusBadgeTextTransform = statusBadgeStyle.textTransform;
       const statusBadgeFontSize = Number.parseFloat(statusBadgeStyle.fontSize);
       statusBadgeProbe.remove();
+      const heldBadgeProbe = document.createElement("span");
+      heldBadgeProbe.className = "status-badge status-held";
+      heldBadgeProbe.textContent = "Održano";
+      document.body.append(heldBadgeProbe);
+      const heldBadgeStyle = getComputedStyle(heldBadgeProbe);
+      const heldBadgeColor = heldBadgeStyle.color;
+      const heldBadgeBackground = heldBadgeStyle.backgroundColor;
+      heldBadgeProbe.remove();
       const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
       const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
@@ -205,6 +213,8 @@ async function run() {
         detailActionButtonsAreBordered,
         statusBadgesAreUppercase: statusBadgeTextTransform === "uppercase"
           && statusBadgeFontSize <= 11,
+        heldStatusBadgeIsBlue: heldBadgeColor === "rgb(27, 95, 153)"
+          && heldBadgeBackground === "rgb(230, 243, 255)",
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
@@ -234,6 +244,7 @@ async function run() {
     assert.equal(desktopLayout.detailActionButtonsHaveIcons, true);
     assert.equal(desktopLayout.detailActionButtonsAreBordered, true);
     assert.equal(desktopLayout.statusBadgesAreUppercase, true);
+    assert.equal(desktopLayout.heldStatusBadgeIsBlue, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
     assert.equal(desktopLayout.importSummaryIsSubtle, true);

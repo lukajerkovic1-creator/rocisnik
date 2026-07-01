@@ -1513,7 +1513,7 @@ select.invalid {
 }
 
 .search-result-button.status-held {
-  border-left-color: #6d7c79;
+  border-left-color: #2877b7;
 }
 
 .search-result-date {
@@ -1590,8 +1590,8 @@ select.invalid {
 }
 
 .status-badge.status-held {
-  color: #465351;
-  background: #eef2f1;
+  color: #1b5f99;
+  background: #e6f3ff;
 }
 
 .details-list .status-badge {
