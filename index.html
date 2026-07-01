@@ -51,6 +51,16 @@
             </div>
           </div>
           <p class="backup-note">Šifrirani backup je sigurnija opcija. Lozinku nije moguće vratiti ako je zaboravite. Bez lozinke nije moguće otvoriti šifrirani backup.</p>
+          <div class="backup-metadata" id="backupMetadata" aria-live="polite">
+            <div>
+              <span>Zadnji izvoz JSON-a</span>
+              <strong id="lastJsonExportAt">nikada</strong>
+            </div>
+            <div>
+              <span>Zadnji uvoz JSON-a</span>
+              <strong id="lastJsonImportAt">nikada</strong>
+            </div>
+          </div>
           <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
         </div>
         <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
@@ -407,6 +417,23 @@
         <div class="modal-actions">
           <button class="primary-button" type="button" id="encryptedBackupConfirmButton">Nastavi</button>
           <button class="ghost-button" type="button" id="encryptedBackupCancelButton">Odustani</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="jsonExportModal" role="dialog" aria-modal="true" aria-labelledby="jsonExportTitle" hidden>
+      <section class="modal-panel">
+        <div class="modal-heading">
+          <h2 id="jsonExportTitle">JSON backup je spreman</h2>
+          <button class="icon-close" type="button" id="jsonExportCloseButton" aria-label="Zatvori">&times;</button>
+        </div>
+        <p>JSON backup može sadržavati osjetljive podatke. Dijelite ga e-mailom samo ako je to sigurno i primjereno.</p>
+        <p class="modal-note" id="jsonExportFilename"></p>
+        <p class="backup-message" id="jsonExportMessage" role="status" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button class="primary-button" type="button" id="jsonExportDownloadButton">Preuzmi JSON</button>
+          <button class="secondary-button" type="button" id="jsonExportShareButton">Podijeli putem e-maila</button>
+          <button class="ghost-button" type="button" id="jsonExportDismissButton">Zatvori</button>
         </div>
       </section>
     </div>

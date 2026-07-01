@@ -321,6 +321,35 @@ select:focus-visible {
   font-size: 12px !important;
 }
 
+.backup-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.backup-metadata div {
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 107, 99, 0.14);
+  border-radius: var(--radius);
+  background: rgba(231, 246, 242, 0.62);
+}
+
+.backup-metadata span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.backup-metadata strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+}
+
 .encrypted-fields {
   display: grid;
   gap: 12px;
@@ -1331,6 +1360,7 @@ select.invalid {
   }
 
   .backup-tools,
+  .backup-metadata,
   .import-controls,
   .import-mode {
     display: grid;

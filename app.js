@@ -6,6 +6,8 @@
   const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
   const ONBOARDING_COMPLETED_AT_KEY = "onboardingCompletedAt";
   const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
+  const LAST_JSON_EXPORT_AT_KEY = "rocisnik.lastJsonExportAt";
+  const LAST_JSON_IMPORT_AT_KEY = "rocisnik.lastJsonImportAt";
   const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
   const DEFAULT_REMINDER_KEY = "rocisnik.defaultReminder.v1";
   const BACKUP_FORMAT_VERSION = 1;
@@ -114,6 +116,7 @@
     scheduleView: "next30",
     encryptedBackupAction: "",
     pendingEncryptedImportFile: null,
+    pendingJsonExport: null,
     visibleStart: null,
     visibleEnd: null,
     showDeleted: false,
@@ -164,7 +167,16 @@
     importJsonFile: document.getElementById("importJsonFile"),
     importEncryptedFile: document.getElementById("importEncryptedFile"),
     importModeInputs: Array.from(document.querySelectorAll('input[name="importMode"]')),
+    lastJsonExportAt: document.getElementById("lastJsonExportAt"),
+    lastJsonImportAt: document.getElementById("lastJsonImportAt"),
     backupMessage: document.getElementById("backupMessage"),
+    jsonExportModal: document.getElementById("jsonExportModal"),
+    jsonExportCloseButton: document.getElementById("jsonExportCloseButton"),
+    jsonExportDownloadButton: document.getElementById("jsonExportDownloadButton"),
+    jsonExportShareButton: document.getElementById("jsonExportShareButton"),
+    jsonExportDismissButton: document.getElementById("jsonExportDismissButton"),
+    jsonExportFilename: document.getElementById("jsonExportFilename"),
+    jsonExportMessage: document.getElementById("jsonExportMessage"),
     encryptedBackupModal: document.getElementById("encryptedBackupModal"),
     encryptedBackupTitle: document.getElementById("encryptedBackupTitle"),
     encryptedBackupDescription: document.getElementById("encryptedBackupDescription"),
@@ -286,6 +298,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
       if (!els.securityNoticeModal.hidden) closeSecurityNoticeModal();
+      if (!els.jsonExportModal.hidden) closeJsonExportModal();
       if (!els.encryptedBackupModal.hidden) closeEncryptedBackupModal();
       if (!els.onboardingModal.hidden) dismissOnboarding();
     });
@@ -299,6 +312,13 @@
     els.remindersList.addEventListener("click", handleReminderAction);
     els.importJsonButton.addEventListener("click", () => els.importJsonFile.click());
     els.importJsonFile.addEventListener("change", handleImportFile);
+    els.jsonExportDownloadButton.addEventListener("click", downloadPendingJsonExport);
+    els.jsonExportShareButton.addEventListener("click", sharePendingJsonExportByEmail);
+    els.jsonExportDismissButton.addEventListener("click", closeJsonExportModal);
+    els.jsonExportCloseButton.addEventListener("click", closeJsonExportModal);
+    els.jsonExportModal.addEventListener("click", (event) => {
+      if (event.target === els.jsonExportModal) closeJsonExportModal();
+    });
     els.importEncryptedButton.addEventListener("click", () => els.importEncryptedFile.click());
     els.importEncryptedFile.addEventListener("change", handleEncryptedImportFile);
     els.encryptedBackupConfirmButton.addEventListener("click", handleEncryptedBackupConfirm);
@@ -434,22 +454,80 @@
   }
 
   function exportJsonBackup() {
-    const backup = createBackupPayload();
-    const content = JSON.stringify(backup, null, 2);
-    const blob = new Blob([content], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    try {
+      const backup = createBackupPayload();
+      const filename = `rocisnik-backup-${toDateKey(new Date())}.json`;
+      const content = JSON.stringify(backup, null, 2);
+      const blob = new Blob([content], { type: "application/json" });
+      const file = new File([blob], filename, { type: "application/json" });
 
-    link.href = url;
-    link.download = `rocisnik-backup-${toDateKey(new Date())}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+      state.pendingJsonExport = { blob, file, filename };
+      setLastJsonExportAt(new Date());
+      markBackupCompleted();
+      renderBackupMetadata();
+      renderBackupReminder();
+      showBackupMessage(`JSON backup je pripremljen za ${formatHearingCount(state.hearings.length)}.`);
+      openJsonExportModal();
+    } catch (error) {
+      state.pendingJsonExport = null;
+      showBackupMessage("JSON export nije uspio. Pokušajte ponovno.", "error");
+    }
+  }
 
-    markBackupCompleted();
-    showBackupMessage(`Izvezeno ${formatHearingCount(state.hearings.length)} u JSON datoteku.`);
-    renderBackupReminder();
+  function openJsonExportModal() {
+    const pending = state.pendingJsonExport;
+    if (!pending) return;
+    els.jsonExportFilename.textContent = `Datoteka: ${pending.filename}`;
+    showJsonExportMessage("");
+    els.jsonExportModal.hidden = false;
+    document.body.classList.add("modal-open");
+    els.jsonExportDownloadButton.focus();
+  }
+
+  function closeJsonExportModal() {
+    els.jsonExportModal.hidden = true;
+    document.body.classList.remove("modal-open");
+    showJsonExportMessage("");
+  }
+
+  function downloadPendingJsonExport() {
+    const pending = state.pendingJsonExport;
+    if (!pending) {
+      showJsonExportMessage("JSON backup više nije dostupan. Pokrenite izvoz ponovno.", "error");
+      return;
+    }
+    downloadBlob(pending.blob, pending.filename);
+    showJsonExportMessage("JSON datoteka je preuzeta.");
+    showBackupMessage(`Preuzet je JSON backup: ${pending.filename}`);
+  }
+
+  async function sharePendingJsonExportByEmail() {
+    const pending = state.pendingJsonExport;
+    if (!pending) {
+      showJsonExportMessage("JSON backup više nije dostupan. Pokrenite izvoz ponovno.", "error");
+      return;
+    }
+
+    try {
+      if (navigator.share && navigator.canShare?.({ files: [pending.file] })) {
+        await navigator.share({
+          files: [pending.file],
+          title: "Ročišnik JSON backup",
+          text: "U privitku je JSON sigurnosna kopija ročišnika."
+        });
+        showJsonExportMessage("Dijeljenje je pokrenuto.");
+        return;
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        showJsonExportMessage("Dijeljenje je otkazano.");
+        return;
+      }
+    }
+
+    downloadBlob(pending.blob, pending.filename);
+    openJsonBackupMailto();
+    showJsonExportMessage("Datoteka je preuzeta. U e-mail ručno priložite upravo preuzetu JSON datoteku.");
   }
 
   function openEncryptedExportModal() {
@@ -595,7 +673,11 @@
         return;
       }
 
-      applyValidatedImport(validation);
+      const applied = applyValidatedImport(validation);
+      if (applied) {
+        setLastJsonImportAt(new Date());
+        renderBackupMetadata();
+      }
     } catch (error) {
       showBackupMessage("Datoteka nije ispravan JSON backup Ročišnika.", "error");
     }
@@ -619,6 +701,59 @@
     checkDueReminders();
     showBackupMessage(result.message);
     return true;
+  }
+
+  function getBackupMetadata() {
+    return {
+      lastJsonExportAt: getStoredDate(LAST_JSON_EXPORT_AT_KEY),
+      lastJsonImportAt: getStoredDate(LAST_JSON_IMPORT_AT_KEY)
+    };
+  }
+
+  function setLastJsonExportAt(date) {
+    window.localStorage.setItem(LAST_JSON_EXPORT_AT_KEY, date.toISOString());
+  }
+
+  function setLastJsonImportAt(date) {
+    window.localStorage.setItem(LAST_JSON_IMPORT_AT_KEY, date.toISOString());
+  }
+
+  function renderBackupMetadata() {
+    const metadata = getBackupMetadata();
+    els.lastJsonExportAt.textContent = formatBackupMetadataDate(metadata.lastJsonExportAt);
+    els.lastJsonImportAt.textContent = formatBackupMetadataDate(metadata.lastJsonImportAt);
+  }
+
+  function formatBackupMetadataDate(date) {
+    return date ? formatLocalDateTime(date) : "nikada";
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function openJsonBackupMailto() {
+    const subject = encodeURIComponent("Ročišnik JSON backup");
+    const body = encodeURIComponent("U privitak dodajte upravo preuzetu JSON datoteku sigurnosne kopije ročišnika. Napomena: datoteka može sadržavati osjetljive podatke.");
+    const link = document.createElement("a");
+    link.href = `mailto:?subject=${subject}&body=${body}`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  }
+
+  function showJsonExportMessage(message, type = "success") {
+    els.jsonExportMessage.textContent = message;
+    els.jsonExportMessage.classList.toggle("error", type === "error");
   }
 
   function isWebCryptoAvailable() {
@@ -713,14 +848,7 @@
   function downloadJson(payload, filename) {
     const content = JSON.stringify(payload, null, 2);
     const blob = new Blob([content], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, filename);
   }
 
   function showEncryptedBackupMessage(message, type = "success") {
@@ -1586,6 +1714,7 @@
     els.showDeletedToggle.checked = state.showDeleted;
     updateScheduleViewButtons();
     renderSecurityPrompt();
+    renderBackupMetadata();
     renderBackupReminder();
     renderReminders();
     renderCalendar();
@@ -2567,6 +2696,10 @@
 
   function formatLongDateTime(date) {
     return `${DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES_GENITIVE[date.getMonth()]} ${date.getFullYear()}. u ${formatTime(date)}`;
+  }
+
+  function formatLocalDateTime(date) {
+    return `${date.getDate()}. ${date.getMonth() + 1}. ${date.getFullYear()}. ${formatTime(date)}`;
   }
 
   function toDateKey(date) {

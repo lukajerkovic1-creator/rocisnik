@@ -9,6 +9,8 @@ const { chromium } = require("playwright");
 const ROOT = path.resolve(__dirname, "..");
 const STORAGE_KEY = "rocisnik.hearings.v1";
 const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
+const LAST_JSON_EXPORT_AT_KEY = "rocisnik.lastJsonExportAt";
+const LAST_JSON_IMPORT_AT_KEY = "rocisnik.lastJsonImportAt";
 const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
 const ONBOARDING_COMPLETED_AT_KEY = "onboardingCompletedAt";
 
@@ -98,6 +100,8 @@ async function run() {
 
     await assertVisibleText(page, "#securityPrompt", "Sigurnosna napomena");
     await assertVisibleText(page, "#securityPrompt", "osjetljivih stvarnih podataka");
+    await assertVisibleText(page, "#lastJsonExportAt", "nikada");
+    await assertVisibleText(page, "#lastJsonImportAt", "nikada");
 
     await page.click("#securityPromptMoreButton");
     await assertVisibleText(page, "#securityNoticeModal", "Ova aplikacija sprema podatke lokalno");
@@ -362,16 +366,46 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
 
-    const downloadPromise = page.waitForEvent("download");
     await page.click("#backupReminderExportButton");
+    await assertVisibleText(page, "#jsonExportModal", "JSON backup je spreman");
+    await assertVisibleText(page, "#jsonExportModal", "JSON backup može sadržavati osjetljive podatke.");
+    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY));
+    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_JSON_EXPORT_AT_KEY));
+    await assertVisibleText(page, "#lastJsonExportAt", ".");
+    await assertVisibleText(page, "#lastJsonImportAt", "nikada");
+    assert.equal(await page.locator("#backupReminder").isHidden(), true);
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.click("#jsonExportDownloadButton");
     const download = await downloadPromise;
     assert.match(download.suggestedFilename(), /^rocisnik-backup-\d{4}-\d{2}-\d{2}\.json$/);
     const backupPath = await download.path();
     const exportedBackup = JSON.parse(await fs.readFile(backupPath, "utf8"));
     assert.ok(exportedBackup.hearings[0].history.some((event) => event.eventType === "created"));
     assert.ok(exportedBackup.hearings[0].history.some((event) => event.eventType === "restored"));
-    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY));
-    assert.equal(await page.locator("#backupReminder").isHidden(), true);
+
+    await page.evaluate(() => {
+      window.__sharedJsonBackup = null;
+      Object.defineProperty(navigator, "canShare", { configurable: true, value: () => true });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (payload) => {
+          window.__sharedJsonBackup = {
+            title: payload.title,
+            text: payload.text,
+            fileName: payload.files?.[0]?.name || "",
+            fileType: payload.files?.[0]?.type || ""
+          };
+        }
+      });
+    });
+    await page.click("#jsonExportShareButton");
+    const sharedBackup = await page.waitForFunction(() => window.__sharedJsonBackup).then((handle) => handle.jsonValue());
+    assert.equal(sharedBackup.title, "Ročišnik JSON backup");
+    assert.equal(sharedBackup.text, "U privitku je JSON sigurnosna kopija ročišnika.");
+    assert.match(sharedBackup.fileName, /^rocisnik-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    assert.equal(sharedBackup.fileType, "application/json");
+    await page.click("#jsonExportDismissButton");
 
     await page.evaluate((key) => localStorage.removeItem(key), LAST_BACKUP_AT_KEY);
     await page.click("#exportEncryptedButton");
@@ -444,12 +478,20 @@ async function run() {
       note: "Postojeća povijest"
     }];
     const importPath = path.join(importDir, "rocisnik-import-history.json");
+    const invalidImportPath = path.join(importDir, "rocisnik-invalid.json");
+    await fs.writeFile(invalidImportPath, JSON.stringify({ formatVersion: 1, hearings: [{ id: "broken" }] }), "utf8");
     await fs.writeFile(importPath, JSON.stringify({
       formatVersion: 1,
       exportedAt: new Date().toISOString(),
       metadata: { appName: "Ročišnik", storageKey: STORAGE_KEY },
       hearings: [importRecord]
     }), "utf8");
+    await page.evaluate((key) => localStorage.removeItem(key), LAST_JSON_IMPORT_AT_KEY);
+    await page.setInputFiles("#importJsonFile", invalidImportPath);
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("nije ispravno"));
+    await assertVisibleText(page, "#backupMessage", "nije ispravno");
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), LAST_JSON_IMPORT_AT_KEY), null);
+
     await page.setInputFiles("#importJsonFile", importPath);
     await page.waitForFunction((key) => {
       const hearings = JSON.parse(localStorage.getItem(key) || "[]");
@@ -461,6 +503,8 @@ async function run() {
     assert.ok(imported, "Imported hearing should be saved");
     assert.ok(imported.history.some((event) => event.eventId === "existing-import-history"));
     assert.ok(imported.history.some((event) => event.eventType === "imported"));
+    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_JSON_IMPORT_AT_KEY));
+    await assertVisibleText(page, "#lastJsonImportAt", ".");
     await fs.rm(importDir, { recursive: true, force: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
