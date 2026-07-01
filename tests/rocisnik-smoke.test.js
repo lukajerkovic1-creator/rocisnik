@@ -213,7 +213,7 @@ async function run() {
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
         searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false,
-        searchGridHasFourDesktopColumns: searchGridColumns === 4,
+        searchGridHasWideDesktopColumns: searchGridColumns === 5,
         quickAddCompact: quickAdd ? quickAdd.height <= 36 : false,
         reminderTabHasSvgIcon: reminderIcon ? reminderIcon.width === 16 && reminderIcon.height === 16 : false,
         backupButtonsHaveIcons
@@ -241,7 +241,7 @@ async function run() {
     assert.equal(desktopLayout.datePresetsCompact, true);
     assert.equal(desktopLayout.searchActionsBeforePresets, true);
     assert.equal(desktopLayout.searchActionsInFirstViewport, true);
-    assert.equal(desktopLayout.searchGridHasFourDesktopColumns, true);
+    assert.equal(desktopLayout.searchGridHasWideDesktopColumns, true);
     assert.equal(desktopLayout.quickAddCompact, true);
     assert.equal(desktopLayout.reminderTabHasSvgIcon, true);
     assert.equal(desktopLayout.backupButtonsHaveIcons, true);

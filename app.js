@@ -2007,7 +2007,7 @@
   function createHearingButton(hearing, options = {}) {
     const date = new Date(hearing.hearingDateTime);
     const showPastBadge = Boolean(options.markPast && isPastHearing(hearing));
-    const subject = hearing.disputeSubject || hearing.specificity || "Bez dodatnog opisa";
+    const subject = getHearingSubject(hearing);
     const dateLabel = formatNumericDate(date);
     const reminderIndicator = hasActiveReminderIndicator(hearing)
       ? `<span class="hearing-reminder-indicator" title="Ima podsjetnik" aria-hidden="true"></span>`
@@ -2053,7 +2053,7 @@
 
   function createSearchResultButton(hearing) {
     const date = new Date(hearing.hearingDateTime);
-    const subject = hearing.disputeSubject || hearing.specificity || "Bez dodatnog opisa";
+    const subject = getHearingSubject(hearing);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "search-result-button";
@@ -2171,7 +2171,7 @@
     els.detailsDefendant.textContent = hearing.defendant;
     els.detailsStatus.replaceChildren(createStatusBadge(hearing.status));
     els.detailsReminders.textContent = getReminderSummary(hearing);
-    els.detailsDisputeSubject.textContent = hearing.disputeSubject || "Nije uneseno";
+    els.detailsDisputeSubject.textContent = getHearingSubject(hearing, "Nije uneseno");
     els.detailsDisputeValue.textContent = hearing.disputeValue || "Nije uneseno";
     els.detailsSpecificity.textContent = hearing.specificity || "Nije uneseno";
     els.detailsRecordId.textContent = hearing.id || "Nije dostupno";
@@ -2184,6 +2184,10 @@
     els.deleteButton.hidden = deleted;
     els.restoreButton.hidden = !deleted;
     els.moreDetailsButton.hidden = false;
+  }
+
+  function getHearingSubject(hearing, fallback = "Bez dodatnog opisa") {
+    return hearing.disputeSubject || hearing.dispute || hearing.specificity || fallback;
   }
 
   function toggleHistoryPanel() {

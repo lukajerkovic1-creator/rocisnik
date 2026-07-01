@@ -2042,6 +2042,28 @@ select.invalid {
 }
 
 @media (min-width: 761px) {
+  .app-shell {
+    padding: 14px 16px 8px;
+  }
+
+  .topbar {
+    margin-bottom: 7px;
+  }
+
+  .overview-strip {
+    margin-bottom: 8px;
+  }
+
+  .workspace {
+    gap: 8px 10px;
+  }
+
+  .entry-panel,
+  .search-panel,
+  .details-panel {
+    padding: 12px;
+  }
+
   .search-panel > .panel-heading {
     display: none;
   }
@@ -2093,16 +2115,17 @@ select.invalid {
 
   .search-panel .utility-tabs {
     order: 0;
+    margin: -4px -4px 8px;
   }
 
   .search-grid {
     order: 1;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px 14px;
+    gap: 6px 14px;
   }
 
   .search-panel label {
-    gap: 3px;
+    gap: 2px;
   }
 
   .search-panel label span {
@@ -2111,20 +2134,20 @@ select.invalid {
 
   .search-panel input,
   .search-panel select {
-    min-height: 32px;
-    padding: 6px 9px;
+    min-height: 30px;
+    padding: 5px 9px;
     font-size: 12px;
   }
 
   .search-actions {
     order: 2;
     grid-template-columns: minmax(160px, 240px) minmax(150px, 200px);
-    margin-top: 7px;
+    margin-top: 6px;
   }
 
   .search-actions .primary-button,
   .search-actions .ghost-button {
-    min-height: 36px;
+    min-height: 32px;
     font-size: 12px;
   }
 
@@ -2309,7 +2332,7 @@ select.invalid {
 
   .side-column .data-notice {
     position: relative;
-    padding: 9px 13px;
+    padding: 8px 12px;
   }
 
   .side-column .data-notice h2 {
@@ -2394,11 +2417,11 @@ select.invalid {
 
   .side-column .backup-tools {
     gap: 4px;
-    margin-top: 5px;
+    margin-top: 4px;
   }
 
   .side-column .backup-tools .compact-button {
-    min-height: 27px;
+    min-height: 26px;
     padding: 0 10px;
     font-size: 12px;
   }
@@ -2441,9 +2464,13 @@ select.invalid {
   }
 
   .side-column .backup-note {
-    margin-top: 4px !important;
+    margin-top: 3px !important;
     font-size: 11px !important;
     line-height: 1.2;
+  }
+
+  .side-column .import-options:not([open]) {
+    max-width: 168px;
   }
 
   .side-column .backup-message {
@@ -2604,6 +2631,12 @@ select.invalid {
 .mobile-tab.active {
   color: #fff;
   background: var(--accent);
+}
+
+@media (min-width: 1181px) {
+  .search-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1180px) {
