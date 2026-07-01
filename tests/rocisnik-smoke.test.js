@@ -141,6 +141,7 @@ async function run() {
       const topNewIconStyle = getComputedStyle(document.querySelector("#clearSelectionButton"), "::before");
       const topbarActionIconStyle = getComputedStyle(document.querySelector(".topbar-action-icon"));
       const topbarActionSvg = document.querySelector(".topbar-action-icon svg")?.getBoundingClientRect();
+      const detailActionButtons = ["#editButton", "#deleteButton", "#moreDetailsButton"];
       const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
       const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
@@ -171,6 +172,10 @@ async function run() {
         topbarActionIconsAreLightweight: topbarActionIconStyle.backgroundColor === "rgba(0, 0, 0, 0)"
           && Number.parseFloat(topbarActionIconStyle.width) <= 18
           && topbarActionSvg?.width <= 17,
+        detailActionButtonsHaveIcons: detailActionButtons.every((selector) => {
+          const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
+          return iconStyle.content === '""' && iconStyle.maskImage !== "none";
+        }),
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
@@ -194,6 +199,7 @@ async function run() {
     assert.equal(desktopLayout.quickSearchHasIcon, true);
     assert.equal(desktopLayout.topNewButtonHasIcon, true);
     assert.equal(desktopLayout.topbarActionIconsAreLightweight, true);
+    assert.equal(desktopLayout.detailActionButtonsHaveIcons, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
     assert.equal(desktopLayout.importSummaryIsSubtle, true);
