@@ -2059,8 +2059,8 @@ select.invalid {
 
   .search-grid {
     order: 1;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px 14px;
   }
 
   .search-panel label {

@@ -165,6 +165,9 @@ async function run() {
       const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
       const quickAdd = document.querySelector(".quick-add-button")?.getBoundingClientRect();
+      const searchGridColumns = getComputedStyle(document.querySelector(".search-grid")).gridTemplateColumns
+        .split(" ")
+        .filter(Boolean).length;
       const reminderIcon = document.querySelector('.search-panel .utility-tab[data-utility-view="reminders"] .utility-tab-icon svg')?.getBoundingClientRect();
       const backupIconTargets = ["#exportJsonButton", "#importJsonButton", "#exportEncryptedButton"];
       const backupButtonsHaveIcons = backupIconTargets.every((selector) => {
@@ -204,6 +207,7 @@ async function run() {
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
         searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false,
+        searchGridHasFourDesktopColumns: searchGridColumns === 4,
         quickAddCompact: quickAdd ? quickAdd.height <= 36 : false,
         reminderTabHasSvgIcon: reminderIcon ? reminderIcon.width === 16 && reminderIcon.height === 16 : false,
         backupButtonsHaveIcons
@@ -229,6 +233,7 @@ async function run() {
     assert.equal(desktopLayout.datePresetsCompact, true);
     assert.equal(desktopLayout.searchActionsBeforePresets, true);
     assert.equal(desktopLayout.searchActionsInFirstViewport, true);
+    assert.equal(desktopLayout.searchGridHasFourDesktopColumns, true);
     assert.equal(desktopLayout.quickAddCompact, true);
     assert.equal(desktopLayout.reminderTabHasSvgIcon, true);
     assert.equal(desktopLayout.backupButtonsHaveIcons, true);
