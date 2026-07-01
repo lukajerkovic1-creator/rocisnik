@@ -129,6 +129,7 @@
     filters: {
       plaintiff: "",
       defendant: "",
+      caseNumber: "",
       subject: "",
       value: "",
       other: "",
@@ -232,6 +233,7 @@
     filters: {
       plaintiff: document.getElementById("filterPlaintiff"),
       defendant: document.getElementById("filterDefendant"),
+      caseNumber: document.getElementById("filterCaseNumber"),
       subject: document.getElementById("filterSubject"),
       value: document.getElementById("filterValue"),
       other: document.getElementById("filterOther"),
@@ -2569,9 +2571,10 @@
     const checks = [
       [filters.plaintiff, hearing.plaintiff],
       [filters.defendant, hearing.defendant],
+      [filters.caseNumber, hearing.caseNumber],
       [filters.subject, hearing.disputeSubject],
       [filters.value, hearing.disputeValue],
-      [filters.other, `${hearing.caseNumber} ${hearing.specificity}`]
+      [filters.other, hearing.specificity]
     ];
     return checks.every(([query, value]) => !query || normalizeSearch(value).includes(query));
   }

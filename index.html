@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=63">
+    <link rel="stylesheet" href="styles.css?v=64">
   </head>
   <body>
     <div class="app-shell">
@@ -380,8 +380,13 @@
             </label>
 
             <label>
-              <span>Predmet</span>
-              <input id="filterSubject" type="search" autocomplete="off" placeholder="Pretraži predmet">
+              <span>Broj predmeta</span>
+              <input id="filterCaseNumber" type="search" autocomplete="off" placeholder="npr. P-123/2026">
+            </label>
+
+            <label>
+              <span>Predmet spora</span>
+              <input id="filterSubject" type="search" autocomplete="off" placeholder="Ključna riječ predmeta">
             </label>
 
             <label>
@@ -391,7 +396,7 @@
 
             <label>
               <span>Drugo</span>
-              <input id="filterOther" type="search" autocomplete="off" placeholder="Broj predmeta ili specifičnost">
+              <input id="filterOther" type="search" autocomplete="off" placeholder="Specifičnost ili napomena">
             </label>
 
             <label>
@@ -655,6 +660,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=63"></script>
+    <script src="app.js?v=64"></script>
   </body>
 </html>

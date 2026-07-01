@@ -128,6 +128,8 @@ async function run() {
     await assertVisibleText(page, ".search-panel .utility-tabs", "Pretraživanje");
     await assertVisibleText(page, ".search-panel .utility-tabs", "Novo ročište");
     await assertVisibleText(page, ".search-panel .utility-tabs", "Podsjetnici");
+    await assertVisibleText(page, ".search-grid", "Broj predmeta");
+    await assertVisibleText(page, ".search-grid", "Predmet spora");
     await assertVisibleText(page, ".search-grid", "Prikaži obrisane");
     const desktopLayout = await page.evaluate(() => {
       const utilityTabs = document.querySelector(".search-panel .utility-tabs")?.getBoundingClientRect();
@@ -460,6 +462,18 @@ async function run() {
     await assertSearchExcludes(page, "Datum Obrisano");
 
     await page.click("#clearFiltersButton");
+    await page.fill("#filterCaseNumber", "P-123/2026");
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Croatia osiguranje");
+    await assertSearchExcludes(page, "Datum Danas");
+
+    await page.click("#clearFiltersButton");
+    await page.fill("#filterOther", "Smoke test");
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Datum Danas");
+    await assertSearchExcludes(page, "Croatia osiguranje");
+
+    await page.click("#clearFiltersButton");
     await page.fill("#filterDateFrom", toDateKey(tomorrow));
     await page.fill("#filterDateTo", toDateKey(tomorrow));
     await page.selectOption("#filterStatus", "otkazano");
@@ -705,6 +719,7 @@ async function run() {
     await page.click('[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
+    assert.equal(await page.locator("#filterCaseNumber").isVisible(), true);
     assert.equal(await page.locator("#filterDeleted").isVisible(), true);
     assert.equal(await page.locator("#filterDateFrom").isVisible(), true);
     assert.equal(await page.locator('[data-date-preset="next-30"]').isVisible(), true);
