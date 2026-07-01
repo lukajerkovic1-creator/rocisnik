@@ -381,6 +381,10 @@ async function run() {
     await assertVisibleText(page, "#moreDetailsButton", "Više");
     await assertVisibleText(page, "#detailsCaseParties", "Croatia osiguranje - Marko Markovic");
     assert.equal(await page.locator(".side-column .details-panel").evaluate((element) => element.scrollHeight <= element.clientHeight + 1), true);
+    assert.equal(await page.locator(".side-column .detail-date-row").evaluate((element) => {
+      const iconStyle = getComputedStyle(element, "::before");
+      return iconStyle.content === '""' && iconStyle.maskImage !== "none";
+    }), true);
     assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), false);
     await page.click("#moreDetailsButton");
     assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), true);
