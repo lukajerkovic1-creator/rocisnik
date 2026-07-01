@@ -20,6 +20,7 @@
         </div>
         <div class="topbar-actions">
           <button class="text-button" type="button" id="dataSafetyButton">Sigurnost podataka</button>
+          <button class="text-button" type="button" id="securityNoticeButton">Zaštita podataka</button>
           <button class="ghost-button" type="button" id="clearSelectionButton">Novi unos</button>
         </div>
       </header>
@@ -48,6 +49,17 @@
           <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
         </div>
         <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
+      </section>
+
+      <section class="security-prompt" id="securityPrompt" aria-labelledby="securityPromptTitle" hidden>
+        <div>
+          <h2 id="securityPromptTitle">Sigurnosna napomena</h2>
+          <p>Ne preporučuje se unos osjetljivih stvarnih podataka ako uređaj nije zaštićen lozinkom/biometrijom i ako ne radite redovite sigurnosne kopije. Podaci su spremljeni lokalno u pregledniku.</p>
+        </div>
+        <div class="security-prompt-actions">
+          <button class="secondary-button compact-button" type="button" id="securityPromptAcceptButton">Pročitao sam</button>
+          <button class="text-button compact-button" type="button" id="securityPromptMoreButton">Saznaj više</button>
+        </div>
       </section>
 
       <section class="backup-reminder" id="backupReminder" aria-labelledby="backupReminderTitle" hidden>
@@ -270,6 +282,20 @@
           </div>
         </aside>
       </main>
+    </div>
+
+    <div class="modal-backdrop" id="securityNoticeModal" role="dialog" aria-modal="true" aria-labelledby="securityNoticeModalTitle" hidden>
+      <section class="modal-panel">
+        <div class="modal-heading">
+          <h2 id="securityNoticeModalTitle">Zaštita podataka</h2>
+          <button class="icon-close" type="button" id="securityNoticeCloseButton" aria-label="Zatvori">&times;</button>
+        </div>
+        <p>Ova aplikacija sprema podatke lokalno u pregledniku na ovom uređaju. Ako uređaj nije zaštićen, drugi korisnici uređaja mogu imati pristup podacima. Brisanje podataka preglednika, promjena uređaja ili kvar uređaja može dovesti do gubitka unosa. Za stvarne i osjetljive podatke koristite zaštićen uređaj, redovito izvozite sigurnosnu kopiju i ne unosite podatke koje ne želite lokalno pohraniti u pregledniku.</p>
+        <div class="modal-actions">
+          <button class="primary-button" type="button" id="securityNoticeAcceptButton">Pročitao sam i razumijem</button>
+          <button class="ghost-button" type="button" id="securityNoticeDismissButton">Zatvori</button>
+        </div>
+      </section>
     </div>
 
     <script src="app.js"></script>

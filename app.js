@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "rocisnik.hearings.v1";
   const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
+  const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
   const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
   const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
   const BACKUP_FORMAT_VERSION = 1;
@@ -71,6 +72,14 @@
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
+    securityNoticeButton: document.getElementById("securityNoticeButton"),
+    securityPrompt: document.getElementById("securityPrompt"),
+    securityPromptAcceptButton: document.getElementById("securityPromptAcceptButton"),
+    securityPromptMoreButton: document.getElementById("securityPromptMoreButton"),
+    securityNoticeModal: document.getElementById("securityNoticeModal"),
+    securityNoticeCloseButton: document.getElementById("securityNoticeCloseButton"),
+    securityNoticeAcceptButton: document.getElementById("securityNoticeAcceptButton"),
+    securityNoticeDismissButton: document.getElementById("securityNoticeDismissButton"),
     backupReminder: document.getElementById("backupReminder"),
     backupReminderExportButton: document.getElementById("backupReminderExportButton"),
     backupReminderLaterButton: document.getElementById("backupReminderLaterButton"),
@@ -153,6 +162,18 @@
     els.form.addEventListener("submit", handleSubmit);
     els.dataSafetyButton.addEventListener("click", showDataNotice);
     els.dismissDataNoticeButton.addEventListener("click", dismissDataNotice);
+    els.securityNoticeButton.addEventListener("click", openSecurityNoticeModal);
+    els.securityPromptMoreButton.addEventListener("click", openSecurityNoticeModal);
+    els.securityPromptAcceptButton.addEventListener("click", acceptSecurityNotice);
+    els.securityNoticeAcceptButton.addEventListener("click", acceptSecurityNotice);
+    els.securityNoticeCloseButton.addEventListener("click", closeSecurityNoticeModal);
+    els.securityNoticeDismissButton.addEventListener("click", closeSecurityNoticeModal);
+    els.securityNoticeModal.addEventListener("click", (event) => {
+      if (event.target === els.securityNoticeModal) closeSecurityNoticeModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !els.securityNoticeModal.hidden) closeSecurityNoticeModal();
+    });
     els.exportJsonButton.addEventListener("click", exportJsonBackup);
     els.backupReminderExportButton.addEventListener("click", exportJsonBackup);
     els.backupReminderLaterButton.addEventListener("click", snoozeBackupReminder);
@@ -213,6 +234,31 @@
     window.localStorage.removeItem(DATA_NOTICE_DISMISSED_KEY);
     els.dataNotice.hidden = false;
     els.dataNotice.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderSecurityPrompt() {
+    els.securityPrompt.hidden = hasAcceptedSecurityNotice();
+  }
+
+  function hasAcceptedSecurityNotice() {
+    return Boolean(window.localStorage.getItem(SECURITY_NOTICE_ACCEPTED_AT_KEY));
+  }
+
+  function acceptSecurityNotice() {
+    window.localStorage.setItem(SECURITY_NOTICE_ACCEPTED_AT_KEY, new Date().toISOString());
+    closeSecurityNoticeModal();
+    renderSecurityPrompt();
+  }
+
+  function openSecurityNoticeModal() {
+    els.securityNoticeModal.hidden = false;
+    document.body.classList.add("modal-open");
+    els.securityNoticeCloseButton.focus();
+  }
+
+  function closeSecurityNoticeModal() {
+    els.securityNoticeModal.hidden = true;
+    document.body.classList.remove("modal-open");
   }
 
   function exportJsonBackup() {
@@ -655,6 +701,7 @@
   function render() {
     updateRangeLabel();
     els.showDeletedToggle.checked = state.showDeleted;
+    renderSecurityPrompt();
     renderBackupReminder();
     renderCalendar();
     renderSearchResults();
