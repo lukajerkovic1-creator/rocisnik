@@ -196,7 +196,7 @@ async function run() {
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
-        importSummaryIsSubtle: importSummary ? importSummary.height <= 28 : false,
+        importSummaryIsSubtle: importSummary ? importSummary.height <= 32 : false,
         searchHeadingHiddenOnDesktop: searchHeading ? searchHeading.height === 0 : false,
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
@@ -478,13 +478,19 @@ async function run() {
     await assertVisibleText(page, "#detailsPlaintiff", "Croatia osiguranje");
     await assertVisibleText(page, "#detailsDefendant", "Marko Markovic");
     assert.equal(await page.locator(".side-column .details-panel").evaluate((element) => element.scrollHeight <= element.clientHeight + 1), true);
+    assert.equal(await page.locator(".side-column .backup-note").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.bottom < window.innerHeight;
+    }), true);
     assert.equal(await page.locator(".side-column .detail-date-row").evaluate((element) => {
       const iconStyle = getComputedStyle(element, "::before");
       return iconStyle.content === '""' && iconStyle.maskImage !== "none";
     }), true);
     assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), false);
+    assert.equal(await page.locator(".side-column #historyPanel").evaluate((element) => getComputedStyle(element).display), "none");
     await page.click("#moreDetailsButton");
     assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), true);
+    assert.notEqual(await page.locator(".side-column #historyPanel").evaluate((element) => getComputedStyle(element).display), "none");
     await assertVisibleText(page, "#detailsHistory", "Zapis stvoren");
 
     await page.click("#editButton");

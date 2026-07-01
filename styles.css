@@ -2193,6 +2193,10 @@ select.invalid {
     margin-top: 8px;
   }
 
+  .side-column .history-panel:not([open]) {
+    display: none;
+  }
+
   .side-column .history-panel summary {
     min-height: 34px;
     padding: 6px 10px;
@@ -2201,7 +2205,7 @@ select.invalid {
 
   .side-column .data-notice {
     position: relative;
-    padding: 13px 16px;
+    padding: 12px 14px;
   }
 
   .side-column .data-notice h2 {
@@ -2247,8 +2251,11 @@ select.invalid {
   .side-column .backup-metadata {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 6px;
-    margin-top: 8px;
+    gap: 0;
+    margin-top: 7px;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
   }
 
   .side-column .backup-metadata div {
@@ -2257,7 +2264,14 @@ select.invalid {
     justify-content: space-between;
     gap: 10px;
     min-width: 0;
-    padding: 6px 8px;
+    padding: 3px 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .side-column .backup-metadata div + div {
+    border-top: 0;
   }
 
   .side-column .backup-metadata span {
@@ -2266,25 +2280,35 @@ select.invalid {
 
   .side-column .backup-metadata strong {
     flex: 0 0 auto;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .side-column .backup-tools {
-    gap: 7px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 7px;
   }
 
   .side-column .backup-tools .compact-button {
-    min-height: 31px;
+    min-height: 30px;
     padding: 0 10px;
     font-size: 12px;
   }
 
   .side-column .import-options summary {
-    min-height: 24px;
-    padding: 0;
+    min-height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
     color: var(--muted);
     font-size: 11px;
+  }
+
+  .side-column .import-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: stretch;
+    gap: 6px;
+    padding: 0;
   }
 
   .side-column .import-options {
@@ -2298,9 +2322,9 @@ select.invalid {
   }
 
   .side-column .backup-note {
-    margin-top: 8px !important;
-    font-size: 12px;
-    line-height: 1.35;
+    margin-top: 7px !important;
+    font-size: 11px !important;
+    line-height: 1.3;
   }
 
   .side-column .backup-message {
