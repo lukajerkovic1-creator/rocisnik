@@ -114,6 +114,10 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
     await assertScheduleViewActive(page, "next30");
+    await assertVisibleText(page, "#summaryTodayCount", "0");
+    await assertVisibleText(page, "#summaryWeekCount", "0");
+    await assertVisibleText(page, "#summaryNext30Count", "0");
+    await assertVisibleText(page, "#summaryActiveCount", "0");
     await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
     await assertVisibleText(page, ".schedule-empty", "Dodajte prvo ročište kako biste počeli voditi osobni raspored.");
     await assertVisibleText(page, ".schedule-empty", "Dodaj prvo ročište");
@@ -133,13 +137,13 @@ async function run() {
     const futureOnly = buildStoredHearing("future-only-record", addDays(startOfDay(new Date()), 45), "Daleki Termin", "Test Osoba");
     await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: futureOnly });
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.click('[data-schedule-view="today"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="today"]');
     await assertVisibleText(page, ".schedule-empty", "Nema ročišta danas.");
-    await page.click('[data-schedule-view="week"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="week"]');
     await assertVisibleText(page, ".schedule-empty", "Nema ročišta ovaj tjedan.");
-    await page.click('[data-schedule-view="next30"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
     await assertVisibleText(page, ".schedule-empty", "Nema ročišta u sljedećih 30 dana.");
-    await page.click('[data-schedule-view="all"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="all"]');
     await assertScheduleIncludes(page, "Daleki Termin");
 
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
@@ -147,7 +151,7 @@ async function run() {
 
     await page.click(".schedule-empty button");
     await assertVisibleText(page, "#formTitle", "Dodaj ročište");
-    await page.click('[data-schedule-view="next30"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
 
     assert.equal(await page.locator("#defaultReminderSelect").inputValue(), "1d");
     assert.equal(await page.locator("#reminder1d").isChecked(), true);
@@ -162,6 +166,7 @@ async function run() {
     assert.equal(await page.locator("#hearingStatus").inputValue(), "zakazano");
     await page.click("#submitButton");
     await assertVisibleText(page, "#formMessage", "Ročište je dodano.");
+    await assertVisibleText(page, "#summaryActiveCount", "1");
 
     let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings.length, 1);
@@ -215,22 +220,22 @@ async function run() {
     await assertScheduleExcludes(page, "Datum Cetrdeset");
     await assertScheduleExcludes(page, "Datum Obrisano");
 
-    await page.click('[data-schedule-view="today"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="today"]');
     await assertScheduleViewActive(page, "today");
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleExcludes(page, "Datum Sutra");
 
-    await page.click('[data-schedule-view="week"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="week"]');
     await assertScheduleViewActive(page, "week");
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleExcludes(page, "Datum Cetrdeset");
 
-    await page.click('[data-schedule-view="next30"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
     await assertScheduleViewActive(page, "next30");
     await assertScheduleIncludes(page, "Datum Deset");
     await assertScheduleExcludes(page, "Datum Cetrdeset");
 
-    await page.click('[data-schedule-view="all"]');
+    await page.click('.schedule-view-tabs [data-schedule-view="all"]');
     await assertScheduleViewActive(page, "all");
     await assertScheduleIncludes(page, "Datum Jucer");
     await assertScheduleIncludes(page, "Datum Cetrdeset");
@@ -511,8 +516,8 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator(".mobile-tabs").isVisible(), true);
     await page.click('[data-mobile-view="schedule"]');
-    assert.equal(await page.locator('[data-schedule-view="today"]').isVisible(), true);
-    assert.equal(await page.locator('[data-schedule-view="next30"]').isVisible(), true);
+    assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="today"]').isVisible(), true);
+    assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="next30"]').isVisible(), true);
     await page.click('[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
@@ -597,7 +602,7 @@ async function assertSearchExcludes(page, unexpectedText) {
 }
 
 async function assertScheduleViewActive(page, view) {
-  assert.equal(await page.locator(`[data-schedule-view="${view}"]`).getAttribute("aria-pressed"), "true");
+  assert.equal(await page.locator(`.schedule-view-tabs [data-schedule-view="${view}"]`).getAttribute("aria-pressed"), "true");
 }
 
 async function assertScheduleIncludes(page, expectedText) {

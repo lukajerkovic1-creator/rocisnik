@@ -140,6 +140,10 @@
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
+    summaryTodayCount: document.getElementById("summaryTodayCount"),
+    summaryWeekCount: document.getElementById("summaryWeekCount"),
+    summaryNext30Count: document.getElementById("summaryNext30Count"),
+    summaryActiveCount: document.getElementById("summaryActiveCount"),
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
@@ -1713,6 +1717,7 @@
     updateRangeLabel();
     els.showDeletedToggle.checked = state.showDeleted;
     updateScheduleViewButtons();
+    renderOverviewSummary();
     renderSecurityPrompt();
     renderBackupMetadata();
     renderBackupReminder();
@@ -1721,6 +1726,19 @@
     renderSearchResults();
     renderDetails();
     updateFormMode();
+  }
+
+  function renderOverviewSummary() {
+    const activeHearings = state.hearings.filter((hearing) => !isDeletedHearing(hearing));
+    const validActiveHearings = activeHearings.filter((hearing) => {
+      const date = new Date(hearing.hearingDateTime);
+      return !Number.isNaN(date.getTime());
+    });
+
+    els.summaryTodayCount.textContent = String(validActiveHearings.filter((hearing) => isToday(new Date(hearing.hearingDateTime))).length);
+    els.summaryWeekCount.textContent = String(validActiveHearings.filter((hearing) => isThisWeek(new Date(hearing.hearingDateTime))).length);
+    els.summaryNext30Count.textContent = String(validActiveHearings.filter((hearing) => isWithinNextDays(new Date(hearing.hearingDateTime), 30)).length);
+    els.summaryActiveCount.textContent = String(activeHearings.length);
   }
 
   function renderCalendar() {
@@ -1857,6 +1875,8 @@
   function createHearingButton(hearing, options = {}) {
     const date = new Date(hearing.hearingDateTime);
     const showPastBadge = Boolean(options.markPast && isPastHearing(hearing));
+    const subject = hearing.disputeSubject || hearing.specificity || "Bez dodatnog opisa";
+    const dateLabel = `${date.getDate()}. ${MONTH_NAMES_NOMINATIVE[date.getMonth()]} ${date.getFullYear()}.`;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "hearing-button";
@@ -1866,10 +1886,17 @@
     button.classList.add(getStatusClass(hearing.status));
     button.innerHTML = `
       <span class="hearing-time">${formatTime(date)}</span>
-      <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
-      ${createStatusBadgeHtml(hearing.status)}
-      ${showPastBadge ? `<span class="past-badge">Prošlo</span>` : ""}
-      ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
+      <span class="hearing-body">
+        <span class="hearing-case">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}</span>
+        <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
+        <span class="hearing-subject">${escapeHtml(subject)}</span>
+        <span class="hearing-date-inline">${escapeHtml(dateLabel)}</span>
+      </span>
+      <span class="hearing-badges">
+        ${createStatusBadgeHtml(hearing.status)}
+        ${showPastBadge ? `<span class="past-badge">Prošlo</span>` : ""}
+        ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
+      </span>
     `;
     button.addEventListener("click", () => {
       state.selectedId = hearing.id;
@@ -1881,6 +1908,7 @@
 
   function createSearchResultButton(hearing) {
     const date = new Date(hearing.hearingDateTime);
+    const subject = hearing.disputeSubject || hearing.specificity || "Bez dodatnog opisa";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "search-result-button";
@@ -1890,9 +1918,11 @@
     button.innerHTML = `
       <span class="search-result-date">${formatLongDateTime(date)}</span>
       <span class="search-result-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
-      <span class="search-result-meta">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}${hearing.disputeSubject ? ` | ${escapeHtml(hearing.disputeSubject)}` : ""}</span>
-      ${createStatusBadgeHtml(hearing.status)}
-      ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing, true))}</span>` : ""}
+      <span class="search-result-meta">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")} | ${escapeHtml(subject)}</span>
+      <span class="hearing-badges">
+        ${createStatusBadgeHtml(hearing.status)}
+        ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing, true))}</span>` : ""}
+      </span>
     `;
     button.addEventListener("click", () => {
       state.selectedId = hearing.id;

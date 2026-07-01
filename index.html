@@ -14,15 +14,16 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div>
+        <div class="brand-block">
           <h1>Ročišnik</h1>
+          <p class="app-subtitle">Osobni raspored sudskih ročišta</p>
           <p id="rangeLabel">Ovaj i sljedeći tjedan</p>
         </div>
         <div class="topbar-actions">
           <button class="text-button" type="button" id="dataSafetyButton">Sigurnost podataka</button>
           <button class="text-button" type="button" id="securityNoticeButton">Zaštita podataka</button>
           <button class="text-button" type="button" id="onboardingButton">Kako koristiti</button>
-          <button class="ghost-button" type="button" id="clearSelectionButton">Novi unos</button>
+          <button class="primary-button topbar-primary" type="button" id="clearSelectionButton">Novo ročište</button>
         </div>
       </header>
 
@@ -112,8 +113,32 @@
       <nav class="mobile-tabs" aria-label="Mobilna navigacija">
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
         <button class="mobile-tab" type="button" data-mobile-view="search">Pretraži</button>
+        <button class="mobile-tab" type="button" data-mobile-view="form">Novo ročište</button>
         <button class="mobile-tab" type="button" data-mobile-view="details">Detalji</button>
       </nav>
+
+      <section class="overview-strip" aria-label="Sažetak ročišta">
+        <button class="overview-card" type="button" data-schedule-view="today">
+          <span>Danas</span>
+          <strong id="summaryTodayCount">0</strong>
+          <small>ročišta</small>
+        </button>
+        <button class="overview-card" type="button" data-schedule-view="week">
+          <span>Ovaj tjedan</span>
+          <strong id="summaryWeekCount">0</strong>
+          <small>ročišta</small>
+        </button>
+        <button class="overview-card" type="button" data-schedule-view="next30">
+          <span>Sljedećih 30 dana</span>
+          <strong id="summaryNext30Count">0</strong>
+          <small>ročišta</small>
+        </button>
+        <div class="overview-card overview-card-static">
+          <span>Ukupno aktivnih</span>
+          <strong id="summaryActiveCount">0</strong>
+          <small>zapisa</small>
+        </div>
+      </section>
 
       <main class="workspace">
         <section class="entry-panel mobile-view utility-view" data-view="form" aria-labelledby="formTitle">
@@ -128,6 +153,7 @@
             <input type="hidden" id="hearingId">
 
             <div class="form-grid">
+              <div class="form-section-title full-row">Stranke</div>
               <label>
                 <span>Tužitelj</span>
                 <input id="plaintiff" name="plaintiff" type="text" autocomplete="off" required>
@@ -138,11 +164,13 @@
                 <input id="defendant" name="defendant" type="text" autocomplete="off" required>
               </label>
 
+              <div class="form-section-title full-row">Predmet</div>
               <label>
                 <span>Broj predmeta</span>
                 <input id="caseNumber" name="caseNumber" type="text" autocomplete="off" required>
               </label>
 
+              <div class="form-section-title full-row">Termin i status</div>
               <label>
                 <span>Datum i sat ročišta</span>
                 <input id="hearingDateTime" name="hearingDateTime" type="datetime-local" required>
@@ -153,6 +181,7 @@
                 <select id="hearingStatus" name="hearingStatus"></select>
               </label>
 
+              <div class="form-section-title full-row">Podsjetnici</div>
               <fieldset class="reminder-fieldset full-row">
                 <legend>Podsjetnici za ročište</legend>
                 <p>Podsjetnici rade dok je aplikacija otvorena ili pri sljedećem otvaranju.</p>
@@ -186,6 +215,7 @@
                 </label>
               </fieldset>
 
+              <div class="form-section-title full-row">Opis i vrijednost</div>
               <label class="full-row">
                 <span>Predmet spora</span>
                 <input id="disputeSubject" name="disputeSubject" type="text" autocomplete="off">
