@@ -324,6 +324,64 @@ async function run() {
     assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY));
     assert.equal(await page.locator("#backupReminder").isHidden(), true);
 
+    await page.evaluate((key) => localStorage.removeItem(key), LAST_BACKUP_AT_KEY);
+    await page.click("#exportEncryptedButton");
+    await assertVisibleText(page, "#encryptedBackupModal", "Izvezi šifrirani backup");
+    await page.fill("#encryptedPassword", "SigurnaLozinka123!");
+    await page.fill("#encryptedPasswordConfirm", "DrugaLozinka123!");
+    await page.click("#encryptedBackupConfirmButton");
+    await assertVisibleText(page, "#encryptedBackupMessage", "Lozinke se ne podudaraju.");
+    assert.equal(await page.locator("#encryptedPassword").getAttribute("type"), "password");
+    await page.check("#showEncryptedPassword");
+    assert.equal(await page.locator("#encryptedPassword").getAttribute("type"), "text");
+    assert.equal(await page.locator("#encryptedPasswordConfirm").getAttribute("type"), "text");
+    await page.uncheck("#showEncryptedPassword");
+    assert.equal(await page.locator("#encryptedPassword").getAttribute("type"), "password");
+
+    await page.fill("#encryptedPassword", "SigurnaLozinka123!");
+    await page.fill("#encryptedPasswordConfirm", "SigurnaLozinka123!");
+    const encryptedDownloadPromise = page.waitForEvent("download");
+    await page.click("#encryptedBackupConfirmButton");
+    const encryptedDownload = await encryptedDownloadPromise;
+    assert.match(encryptedDownload.suggestedFilename(), /^rocisnik-encrypted-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    const encryptedBackupPath = await encryptedDownload.path();
+    const encryptedBackupRaw = await fs.readFile(encryptedBackupPath, "utf8");
+    const encryptedBackup = JSON.parse(encryptedBackupRaw);
+    assert.equal(encryptedBackup.formatVersion, 1);
+    assert.deepEqual(encryptedBackup.algorithm, { name: "AES-GCM", length: 256 });
+    assert.equal(encryptedBackup.kdf.name, "PBKDF2");
+    assert.equal(encryptedBackup.kdf.hash, "SHA-256");
+    assert.ok(encryptedBackup.kdf.iterations >= 250000);
+    assert.ok(encryptedBackup.kdf.salt);
+    assert.ok(encryptedBackup.iv);
+    assert.ok(encryptedBackup.ciphertext);
+    assert.equal(encryptedBackupRaw.includes("Croatia osiguranje"), false);
+    assert.equal(encryptedBackupRaw.includes("Marko Markovic"), false);
+    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY));
+    const storageAfterEncryptedExport = await page.evaluate(() => Object.values(localStorage).join(" "));
+    assert.equal(storageAfterEncryptedExport.includes("SigurnaLozinka123!"), false);
+
+    const recordsBeforeWrongPassword = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    await page.check('input[name="importMode"][value="replace"]');
+    await page.setInputFiles("#importEncryptedFile", encryptedBackupPath);
+    await assertVisibleText(page, "#encryptedBackupModal", "Uvezi šifrirani backup");
+    await page.fill("#encryptedPassword", "PogresnaLozinka123!");
+    await page.click("#encryptedBackupConfirmButton");
+    await page.waitForFunction(() => document.querySelector("#encryptedBackupMessage")?.textContent.includes("Lozinka nije ispravna"));
+    await assertVisibleText(page, "#encryptedBackupMessage", "Lozinka nije ispravna ili datoteka nije valjan šifrirani backup.");
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY), recordsBeforeWrongPassword);
+
+    await page.fill("#encryptedPassword", "SigurnaLozinka123!");
+    await page.click("#encryptedBackupConfirmButton");
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Uvoz je dovršen."));
+    await assertVisibleText(page, "#backupMessage", "Uvoz je dovršen.");
+    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    assert.ok(hearings.some((hearing) => hearing.plaintiff === "Croatia osiguranje"));
+    assert.ok(hearings.some((hearing) => hearing.history?.some((event) => event.eventType === "imported")));
+    const storageAfterEncryptedImport = await page.evaluate(() => Object.values(localStorage).join(" "));
+    assert.equal(storageAfterEncryptedImport.includes("SigurnaLozinka123!"), false);
+    await page.check('input[name="importMode"][value="append"]');
+
     const importDir = await fs.mkdtemp(path.join(os.tmpdir(), "rocisnik-import-"));
     const importRecord = buildStoredHearing("import-history-record", addDays(today, 3), "Import Povijest", "Test Osoba");
     importRecord.history = [{
@@ -344,7 +402,10 @@ async function run() {
       hearings: [importRecord]
     }), "utf8");
     await page.setInputFiles("#importJsonFile", importPath);
-    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Uvoz je dovršen."));
+    await page.waitForFunction((key) => {
+      const hearings = JSON.parse(localStorage.getItem(key) || "[]");
+      return hearings.some((hearing) => hearing.id === "import-history-record");
+    }, STORAGE_KEY);
     await assertVisibleText(page, "#backupMessage", "Uvoz je dovršen.");
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     const imported = hearings.find((hearing) => hearing.id === "import-history-record");

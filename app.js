@@ -8,6 +8,10 @@
   const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
   const DEFAULT_REMINDER_KEY = "rocisnik.defaultReminder.v1";
   const BACKUP_FORMAT_VERSION = 1;
+  const ENCRYPTED_BACKUP_FORMAT_VERSION = 1;
+  const ENCRYPTED_BACKUP_KDF_ITERATIONS = 250000;
+  const ENCRYPTED_BACKUP_SALT_BYTES = 16;
+  const ENCRYPTED_BACKUP_IV_BYTES = 12;
   const BACKUP_REMINDER_INTERVAL_DAYS = 7;
   const BACKUP_REMINDER_LATER_HOURS = 4;
   const REMINDER_CHECK_INTERVAL_MS = 60 * 1000;
@@ -107,6 +111,8 @@
     editingId: null,
     currentMobileView: "schedule",
     scheduleView: "next30",
+    encryptedBackupAction: "",
+    pendingEncryptedImportFile: null,
     visibleStart: null,
     visibleEnd: null,
     showDeleted: false,
@@ -150,10 +156,24 @@
     notificationStatus: document.getElementById("notificationStatus"),
     remindersList: document.getElementById("remindersList"),
     exportJsonButton: document.getElementById("exportJsonButton"),
+    exportEncryptedButton: document.getElementById("exportEncryptedButton"),
     importJsonButton: document.getElementById("importJsonButton"),
+    importEncryptedButton: document.getElementById("importEncryptedButton"),
     importJsonFile: document.getElementById("importJsonFile"),
+    importEncryptedFile: document.getElementById("importEncryptedFile"),
     importModeInputs: Array.from(document.querySelectorAll('input[name="importMode"]')),
     backupMessage: document.getElementById("backupMessage"),
+    encryptedBackupModal: document.getElementById("encryptedBackupModal"),
+    encryptedBackupTitle: document.getElementById("encryptedBackupTitle"),
+    encryptedBackupDescription: document.getElementById("encryptedBackupDescription"),
+    encryptedBackupCloseButton: document.getElementById("encryptedBackupCloseButton"),
+    encryptedBackupConfirmButton: document.getElementById("encryptedBackupConfirmButton"),
+    encryptedBackupCancelButton: document.getElementById("encryptedBackupCancelButton"),
+    encryptedBackupMessage: document.getElementById("encryptedBackupMessage"),
+    encryptedPassword: document.getElementById("encryptedPassword"),
+    encryptedPasswordConfirm: document.getElementById("encryptedPasswordConfirm"),
+    encryptedPasswordConfirmWrap: document.getElementById("encryptedPasswordConfirmWrap"),
+    showEncryptedPassword: document.getElementById("showEncryptedPassword"),
     monthSelect: document.getElementById("monthSelect"),
     yearInput: document.getElementById("yearInput"),
     jumpButton: document.getElementById("jumpButton"),
@@ -257,9 +277,12 @@
       if (event.target === els.securityNoticeModal) closeSecurityNoticeModal();
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !els.securityNoticeModal.hidden) closeSecurityNoticeModal();
+      if (event.key !== "Escape") return;
+      if (!els.securityNoticeModal.hidden) closeSecurityNoticeModal();
+      if (!els.encryptedBackupModal.hidden) closeEncryptedBackupModal();
     });
     els.exportJsonButton.addEventListener("click", exportJsonBackup);
+    els.exportEncryptedButton.addEventListener("click", openEncryptedExportModal);
     els.backupReminderExportButton.addEventListener("click", exportJsonBackup);
     els.backupReminderLaterButton.addEventListener("click", snoozeBackupReminder);
     els.backupReminderTodayButton.addEventListener("click", hideBackupReminderToday);
@@ -268,6 +291,15 @@
     els.remindersList.addEventListener("click", handleReminderAction);
     els.importJsonButton.addEventListener("click", () => els.importJsonFile.click());
     els.importJsonFile.addEventListener("change", handleImportFile);
+    els.importEncryptedButton.addEventListener("click", () => els.importEncryptedFile.click());
+    els.importEncryptedFile.addEventListener("change", handleEncryptedImportFile);
+    els.encryptedBackupConfirmButton.addEventListener("click", handleEncryptedBackupConfirm);
+    els.encryptedBackupCancelButton.addEventListener("click", closeEncryptedBackupModal);
+    els.encryptedBackupCloseButton.addEventListener("click", closeEncryptedBackupModal);
+    els.showEncryptedPassword.addEventListener("change", toggleEncryptedPasswordVisibility);
+    els.encryptedBackupModal.addEventListener("click", (event) => {
+      if (event.target === els.encryptedBackupModal) closeEncryptedBackupModal();
+    });
     els.cancelEditButton.addEventListener("click", resetForm);
     els.clearSelectionButton.addEventListener("click", () => {
       state.selectedId = null;
@@ -378,6 +410,134 @@
     renderBackupReminder();
   }
 
+  function openEncryptedExportModal() {
+    if (!isWebCryptoAvailable()) {
+      showBackupMessage("Šifrirani backup nije dostupan u ovom pregledniku jer Web Crypto API nije podržan.", "error");
+      return;
+    }
+    openEncryptedBackupModal("export");
+  }
+
+  function openEncryptedBackupModal(action) {
+    state.encryptedBackupAction = action;
+    els.encryptedPassword.value = "";
+    els.encryptedPasswordConfirm.value = "";
+    els.showEncryptedPassword.checked = false;
+    toggleEncryptedPasswordVisibility();
+    showEncryptedBackupMessage("");
+
+    const isExport = action === "export";
+    els.encryptedBackupTitle.textContent = isExport ? "Izvezi šifrirani backup" : "Uvezi šifrirani backup";
+    els.encryptedBackupDescription.textContent = isExport
+      ? "Unesite lozinku kojom će backup biti šifriran."
+      : "Unesite lozinku za otvaranje šifriranog backup-a.";
+    els.encryptedPasswordConfirmWrap.hidden = !isExport;
+    els.encryptedBackupConfirmButton.textContent = isExport ? "Izvezi šifrirani backup" : "Uvezi šifrirani backup";
+    els.encryptedBackupModal.hidden = false;
+    document.body.classList.add("modal-open");
+    els.encryptedPassword.focus();
+  }
+
+  function closeEncryptedBackupModal() {
+    els.encryptedBackupModal.hidden = true;
+    document.body.classList.remove("modal-open");
+    state.encryptedBackupAction = "";
+    state.pendingEncryptedImportFile = null;
+    els.importEncryptedFile.value = "";
+    els.encryptedPassword.value = "";
+    els.encryptedPasswordConfirm.value = "";
+    showEncryptedBackupMessage("");
+  }
+
+  function toggleEncryptedPasswordVisibility() {
+    const type = els.showEncryptedPassword.checked ? "text" : "password";
+    els.encryptedPassword.type = type;
+    els.encryptedPasswordConfirm.type = type;
+  }
+
+  async function handleEncryptedBackupConfirm() {
+    if (state.encryptedBackupAction === "export") {
+      await exportEncryptedBackup();
+      return;
+    }
+    if (state.encryptedBackupAction === "import") {
+      await importEncryptedBackup();
+    }
+  }
+
+  async function exportEncryptedBackup() {
+    try {
+      if (!isWebCryptoAvailable()) {
+        showEncryptedBackupMessage("Šifrirani backup nije dostupan u ovom pregledniku.", "error");
+        return;
+      }
+
+      const password = els.encryptedPassword.value;
+      const confirmation = els.encryptedPasswordConfirm.value;
+      if (!password) {
+        showEncryptedBackupMessage("Unesite lozinku za šifrirani backup.", "error");
+        return;
+      }
+      if (password !== confirmation) {
+        showEncryptedBackupMessage("Lozinke se ne podudaraju.", "error");
+        return;
+      }
+
+      const encrypted = await encryptBackupPayload(createBackupPayload(), password);
+      downloadJson(encrypted, `rocisnik-encrypted-backup-${toDateKey(new Date())}.json`);
+      markBackupCompleted();
+      renderBackupReminder();
+      closeEncryptedBackupModal();
+      showBackupMessage(`Izvezen šifrirani backup za ${formatHearingCount(state.hearings.length)}.`);
+    } catch (error) {
+      showEncryptedBackupMessage("Šifrirani export nije uspio. Pokušajte ponovno.", "error");
+    }
+  }
+
+  async function handleEncryptedImportFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!isWebCryptoAvailable()) {
+      showBackupMessage("Uvoz šifriranog backup-a nije dostupan u ovom pregledniku jer Web Crypto API nije podržan.", "error");
+      event.target.value = "";
+      return;
+    }
+
+    state.pendingEncryptedImportFile = file;
+    openEncryptedBackupModal("import");
+  }
+
+  async function importEncryptedBackup() {
+    try {
+      const file = state.pendingEncryptedImportFile;
+      const password = els.encryptedPassword.value;
+      if (!file) {
+        showEncryptedBackupMessage("Odaberite šifriranu backup datoteku.", "error");
+        return;
+      }
+      if (!password) {
+        showEncryptedBackupMessage("Unesite lozinku za šifrirani backup.", "error");
+        return;
+      }
+
+      const parsed = JSON.parse(await file.text());
+      const decryptedPayload = await decryptBackupPayload(parsed, password);
+      const validation = validateBackupPayload(decryptedPayload);
+      if (!validation.valid) {
+        showEncryptedBackupMessage(validation.message, "error");
+        return;
+      }
+
+      const applied = applyValidatedImport(validation);
+      if (!applied) return;
+
+      closeEncryptedBackupModal();
+    } catch (error) {
+      showEncryptedBackupMessage("Lozinka nije ispravna ili datoteka nije valjan šifrirani backup.", "error");
+    }
+  }
+
   async function handleImportFile(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -393,25 +553,137 @@
         return;
       }
 
-      const mode = getImportMode();
-      const action = mode === "replace" ? "zamijeniti postojeće podatke" : "dodati podatke u postojeći ročišnik";
-      const duplicateNote = mode === "append" ? " Zapisi s istim ID-em neće se duplicirati." : "";
-      const confirmed = window.confirm(`Uvoz će ${action}. Datoteka sadrži ${formatHearingCount(validation.hearings.length)}.${duplicateNote} Nastaviti?`);
-      if (!confirmed) {
-        showBackupMessage("Uvoz je otkazan.");
-        return;
-      }
-
-      const result = importHearings(validation.hearings, mode);
-      saveHearings();
-      resetForm();
-      focusImportedRange(result.visibleHearings);
-      render();
-      checkDueReminders();
-      showBackupMessage(result.message);
+      applyValidatedImport(validation);
     } catch (error) {
       showBackupMessage("Datoteka nije ispravan JSON backup Ročišnika.", "error");
     }
+  }
+
+  function applyValidatedImport(validation) {
+    const mode = getImportMode();
+    const action = mode === "replace" ? "zamijeniti postojeće podatke" : "dodati podatke u postojeći ročišnik";
+    const duplicateNote = mode === "append" ? " Zapisi s istim ID-em neće se duplicirati." : "";
+    const confirmed = window.confirm(`Uvoz će ${action}. Datoteka sadrži ${formatHearingCount(validation.hearings.length)}.${duplicateNote} Nastaviti?`);
+    if (!confirmed) {
+      showBackupMessage("Uvoz je otkazan.");
+      return false;
+    }
+
+    const result = importHearings(validation.hearings, mode);
+    saveHearings();
+    resetForm();
+    focusImportedRange(result.visibleHearings);
+    render();
+    checkDueReminders();
+    showBackupMessage(result.message);
+    return true;
+  }
+
+  function isWebCryptoAvailable() {
+    return Boolean(window.crypto?.subtle && window.crypto.getRandomValues);
+  }
+
+  async function encryptBackupPayload(payload, password) {
+    const salt = generateRandomBytes(ENCRYPTED_BACKUP_SALT_BYTES);
+    const iv = generateRandomBytes(ENCRYPTED_BACKUP_IV_BYTES);
+    const key = await deriveEncryptionKey(password, salt);
+    const encoded = new TextEncoder().encode(JSON.stringify(payload));
+    const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+
+    return {
+      formatVersion: ENCRYPTED_BACKUP_FORMAT_VERSION,
+      algorithm: { name: "AES-GCM", length: 256 },
+      kdf: {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        iterations: ENCRYPTED_BACKUP_KDF_ITERATIONS,
+        salt: arrayBufferToBase64(salt)
+      },
+      iv: arrayBufferToBase64(iv),
+      ciphertext: arrayBufferToBase64(ciphertext),
+      exportedAt: new Date().toISOString()
+    };
+  }
+
+  async function decryptBackupPayload(encryptedPayload, password) {
+    validateEncryptedBackupEnvelope(encryptedPayload);
+    const salt = base64ToUint8Array(encryptedPayload.kdf.salt);
+    const iv = base64ToUint8Array(encryptedPayload.iv);
+    const ciphertext = base64ToUint8Array(encryptedPayload.ciphertext);
+    const key = await deriveEncryptionKey(password, salt, encryptedPayload.kdf.iterations);
+    const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+    return JSON.parse(new TextDecoder().decode(decrypted));
+  }
+
+  function validateEncryptedBackupEnvelope(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid encrypted backup");
+    if (payload.formatVersion !== ENCRYPTED_BACKUP_FORMAT_VERSION) throw new Error("Unsupported encrypted backup version");
+    if (payload.algorithm?.name !== "AES-GCM" || payload.algorithm?.length !== 256) throw new Error("Unsupported encryption algorithm");
+    if (payload.kdf?.name !== "PBKDF2" || payload.kdf?.hash !== "SHA-256") throw new Error("Unsupported KDF");
+    if (!Number.isInteger(payload.kdf.iterations) || payload.kdf.iterations < ENCRYPTED_BACKUP_KDF_ITERATIONS) throw new Error("Invalid KDF iterations");
+    if (!payload.kdf.salt || !payload.iv || !payload.ciphertext) throw new Error("Missing encrypted backup data");
+    if (base64ToUint8Array(payload.kdf.salt).byteLength < ENCRYPTED_BACKUP_SALT_BYTES) throw new Error("Invalid salt");
+    if (base64ToUint8Array(payload.iv).byteLength !== ENCRYPTED_BACKUP_IV_BYTES) throw new Error("Invalid IV");
+    if (base64ToUint8Array(payload.ciphertext).byteLength === 0) throw new Error("Invalid ciphertext");
+  }
+
+  async function deriveEncryptionKey(password, salt, iterations = ENCRYPTED_BACKUP_KDF_ITERATIONS) {
+    const passwordKey = await window.crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(password),
+      "PBKDF2",
+      false,
+      ["deriveKey"]
+    );
+    return window.crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+      passwordKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  function generateRandomBytes(length) {
+    const bytes = new Uint8Array(length);
+    window.crypto.getRandomValues(bytes);
+    return bytes;
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    let binary = "";
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return window.btoa(binary);
+  }
+
+  function base64ToUint8Array(value) {
+    const binary = window.atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  function downloadJson(payload, filename) {
+    const content = JSON.stringify(payload, null, 2);
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function showEncryptedBackupMessage(message, type = "success") {
+    els.encryptedBackupMessage.textContent = message;
+    els.encryptedBackupMessage.classList.toggle("error", type === "error");
   }
 
   function createBackupPayload() {

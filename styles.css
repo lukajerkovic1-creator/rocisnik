@@ -315,6 +315,35 @@ select:focus-visible {
   color: var(--danger) !important;
 }
 
+.backup-note,
+.modal-note {
+  color: var(--muted);
+  font-size: 12px !important;
+}
+
+.encrypted-fields {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.password-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.password-toggle input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .notice-close,
 .text-button {
   min-height: 38px;

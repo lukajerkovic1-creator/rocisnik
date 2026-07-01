@@ -31,6 +31,7 @@
           <p>Podaci se čuvaju samo u ovom pregledniku i ne sinkroniziraju se između uređaja. Redovito napravite izvoz/sigurnosnu kopiju. Za stvarne i osjetljive podatke koristite samo zaštićen uređaj.</p>
           <div class="backup-tools" aria-label="Izvoz i uvoz podataka">
             <button class="secondary-button compact-button" type="button" id="exportJsonButton">Izvezi JSON</button>
+            <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
             <div class="import-controls">
               <fieldset class="import-mode" aria-label="Način uvoza">
                 <label>
@@ -43,9 +44,12 @@
                 </label>
               </fieldset>
               <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
+              <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
               <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
+              <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
             </div>
           </div>
+          <p class="backup-note">Šifrirani backup je sigurnija opcija. Lozinku nije moguće vratiti ako je zaboravite. Bez lozinke nije moguće otvoriti šifrirani backup.</p>
           <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
         </div>
         <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
@@ -374,6 +378,36 @@
           </div>
         </aside>
       </main>
+    </div>
+
+    <div class="modal-backdrop" id="encryptedBackupModal" role="dialog" aria-modal="true" aria-labelledby="encryptedBackupTitle" hidden>
+      <section class="modal-panel">
+        <div class="modal-heading">
+          <h2 id="encryptedBackupTitle">Šifrirani backup</h2>
+          <button class="icon-close" type="button" id="encryptedBackupCloseButton" aria-label="Zatvori">&times;</button>
+        </div>
+        <p id="encryptedBackupDescription">Unesite lozinku za šifrirani backup.</p>
+        <p class="modal-note">Lozinku nije moguće vratiti ako je zaboravite. Bez lozinke nije moguće otvoriti šifrirani backup.</p>
+        <div class="encrypted-fields">
+          <label>
+            <span>Lozinka</span>
+            <input id="encryptedPassword" type="password" autocomplete="new-password">
+          </label>
+          <label id="encryptedPasswordConfirmWrap">
+            <span>Potvrda lozinke</span>
+            <input id="encryptedPasswordConfirm" type="password" autocomplete="new-password">
+          </label>
+          <label class="password-toggle">
+            <input id="showEncryptedPassword" type="checkbox">
+            <span>Prikaži lozinku</span>
+          </label>
+        </div>
+        <p class="backup-message" id="encryptedBackupMessage" role="status" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button class="primary-button" type="button" id="encryptedBackupConfirmButton">Nastavi</button>
+          <button class="ghost-button" type="button" id="encryptedBackupCancelButton">Odustani</button>
+        </div>
+      </section>
     </div>
 
     <div class="modal-backdrop" id="securityNoticeModal" role="dialog" aria-modal="true" aria-labelledby="securityNoticeModalTitle" hidden>
