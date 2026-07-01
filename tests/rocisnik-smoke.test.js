@@ -134,6 +134,8 @@ async function run() {
       const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
       const next30Tab = document.querySelector('.schedule-view-tabs [data-schedule-view="next30"]')?.getBoundingClientRect();
+      const quickSearchStyle = getComputedStyle(document.querySelector("#scheduleQuickSearch"));
+      const filterIconStyle = getComputedStyle(document.querySelector("#scheduleFilterButton"), "::before");
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
@@ -141,7 +143,11 @@ async function run() {
         scheduleTabsShareRowWithDatebar: scheduleTabs && scheduleDatebar
           ? Math.abs(scheduleTabs.top - scheduleDatebar.top) <= 2
           : false,
-        next30TabSingleLine: next30Tab ? next30Tab.height <= 40 : false
+        next30TabSingleLine: next30Tab ? next30Tab.height <= 40 : false,
+        quickSearchHasIcon: quickSearchStyle.backgroundImage.includes("data:image/svg+xml")
+          && Number.parseFloat(quickSearchStyle.paddingLeft) >= 34,
+        filterButtonHasIcon: filterIconStyle.content === '""'
+          && filterIconStyle.maskImage !== "none"
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
@@ -149,6 +155,8 @@ async function run() {
     assert.equal(desktopLayout.searchPanelStartsInFirstViewport, true);
     assert.equal(desktopLayout.scheduleTabsShareRowWithDatebar, true);
     assert.equal(desktopLayout.next30TabSingleLine, true);
+    assert.equal(desktopLayout.quickSearchHasIcon, true);
+    assert.equal(desktopLayout.filterButtonHasIcon, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
