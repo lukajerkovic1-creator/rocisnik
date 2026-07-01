@@ -50,6 +50,18 @@
         <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
       </section>
 
+      <section class="backup-reminder" id="backupReminder" aria-labelledby="backupReminderTitle" hidden>
+        <div>
+          <h2 id="backupReminderTitle">Sigurnosna kopija</h2>
+          <p>Preporuka: napravite sigurnosnu kopiju ročišnika. Podaci su spremljeni samo u ovom pregledniku.</p>
+        </div>
+        <div class="backup-reminder-actions">
+          <button class="secondary-button compact-button" type="button" id="backupReminderExportButton">Izvezi sada</button>
+          <button class="ghost-button compact-button" type="button" id="backupReminderLaterButton">Podsjeti me kasnije</button>
+          <button class="text-button compact-button" type="button" id="backupReminderTodayButton">Ne prikazuj danas</button>
+        </div>
+      </section>
+
       <nav class="mobile-tabs" aria-label="Mobilna navigacija">
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
         <button class="mobile-tab" type="button" data-mobile-view="search">Pretraži</button>

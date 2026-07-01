@@ -3,7 +3,11 @@
 
   const STORAGE_KEY = "rocisnik.hearings.v1";
   const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
+  const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
+  const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
   const BACKUP_FORMAT_VERSION = 1;
+  const BACKUP_REMINDER_INTERVAL_DAYS = 7;
+  const BACKUP_REMINDER_LATER_HOURS = 4;
   const DEFAULT_HEARING_STATUS = "zakazano";
   const HEARING_STATUSES = [
     { value: "zakazano", label: "Zakazano", className: "status-scheduled" },
@@ -67,6 +71,10 @@
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
+    backupReminder: document.getElementById("backupReminder"),
+    backupReminderExportButton: document.getElementById("backupReminderExportButton"),
+    backupReminderLaterButton: document.getElementById("backupReminderLaterButton"),
+    backupReminderTodayButton: document.getElementById("backupReminderTodayButton"),
     exportJsonButton: document.getElementById("exportJsonButton"),
     importJsonButton: document.getElementById("importJsonButton"),
     importJsonFile: document.getElementById("importJsonFile"),
@@ -146,6 +154,9 @@
     els.dataSafetyButton.addEventListener("click", showDataNotice);
     els.dismissDataNoticeButton.addEventListener("click", dismissDataNotice);
     els.exportJsonButton.addEventListener("click", exportJsonBackup);
+    els.backupReminderExportButton.addEventListener("click", exportJsonBackup);
+    els.backupReminderLaterButton.addEventListener("click", snoozeBackupReminder);
+    els.backupReminderTodayButton.addEventListener("click", hideBackupReminderToday);
     els.importJsonButton.addEventListener("click", () => els.importJsonFile.click());
     els.importJsonFile.addEventListener("change", handleImportFile);
     els.cancelEditButton.addEventListener("click", resetForm);
@@ -218,7 +229,9 @@
     link.remove();
     URL.revokeObjectURL(url);
 
+    markBackupCompleted();
     showBackupMessage(`Izvezeno ${formatHearingCount(state.hearings.length)} u JSON datoteku.`);
+    renderBackupReminder();
   }
 
   async function handleImportFile(event) {
@@ -378,6 +391,53 @@
   function showBackupMessage(message, type = "success") {
     els.backupMessage.textContent = message;
     els.backupMessage.classList.toggle("error", type === "error");
+  }
+
+  function markBackupCompleted() {
+    window.localStorage.setItem(LAST_BACKUP_AT_KEY, new Date().toISOString());
+    window.localStorage.removeItem(BACKUP_REMINDER_SNOOZE_UNTIL_KEY);
+  }
+
+  function snoozeBackupReminder() {
+    const until = new Date();
+    until.setHours(until.getHours() + BACKUP_REMINDER_LATER_HOURS);
+    window.localStorage.setItem(BACKUP_REMINDER_SNOOZE_UNTIL_KEY, until.toISOString());
+    renderBackupReminder();
+  }
+
+  function hideBackupReminderToday() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    window.localStorage.setItem(BACKUP_REMINDER_SNOOZE_UNTIL_KEY, tomorrow.toISOString());
+    renderBackupReminder();
+  }
+
+  function renderBackupReminder() {
+    els.backupReminder.hidden = !shouldShowBackupReminder();
+  }
+
+  function shouldShowBackupReminder() {
+    if (state.hearings.length === 0) return false;
+    if (isBackupReminderSnoozed()) return false;
+
+    const lastBackupAt = getStoredDate(LAST_BACKUP_AT_KEY);
+    if (!lastBackupAt) return true;
+
+    const daysSinceBackup = (Date.now() - lastBackupAt.getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceBackup > BACKUP_REMINDER_INTERVAL_DAYS;
+  }
+
+  function isBackupReminderSnoozed() {
+    const snoozeUntil = getStoredDate(BACKUP_REMINDER_SNOOZE_UNTIL_KEY);
+    return Boolean(snoozeUntil && snoozeUntil.getTime() > Date.now());
+  }
+
+  function getStoredDate(key) {
+    const value = window.localStorage.getItem(key);
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
   function formatHearingCount(count) {
@@ -595,6 +655,7 @@
   function render() {
     updateRangeLabel();
     els.showDeletedToggle.checked = state.showDeleted;
+    renderBackupReminder();
     renderCalendar();
     renderSearchResults();
     renderDetails();
