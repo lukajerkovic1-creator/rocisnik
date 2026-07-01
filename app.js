@@ -290,6 +290,7 @@
     registerServiceWorker();
     state.hearings = loadHearings();
     if (state.hearings.length) saveHearings();
+    if (hasTodayActiveHearings()) state.scheduleView = "today";
     state.visibleStart = weekStart;
     state.visibleEnd = getDefaultVisibleEnd();
     fillMonthSelect();
@@ -2355,6 +2356,14 @@
 
   function getVisibleHearings() {
     return state.hearings.filter((hearing) => state.showDeleted || !isDeletedHearing(hearing));
+  }
+
+  function hasTodayActiveHearings() {
+    return state.hearings.some((hearing) => {
+      if (isDeletedHearing(hearing)) return false;
+      const date = new Date(hearing.hearingDateTime);
+      return !Number.isNaN(date.getTime()) && isToday(date);
+    });
   }
 
   function isDeletedHearing(hearing) {

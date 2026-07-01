@@ -214,6 +214,10 @@ async function run() {
       localStorage.setItem(key, JSON.stringify([...existing, ...records]));
     }, { key: STORAGE_KEY, records: seededHearings });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await assertScheduleViewActive(page, "today");
+    await assertScheduleIncludes(page, "Datum Danas");
+    await assertScheduleExcludes(page, "Datum Deset");
+    await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
     await assertScheduleViewActive(page, "next30");
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleIncludes(page, "Datum Deset");

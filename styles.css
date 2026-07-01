@@ -507,7 +507,7 @@ select:focus-visible {
 }
 
 .topbar-actions .text-button::before {
-  display: inline-grid;
+  display: none;
   place-items: center;
   width: 22px;
   height: 22px;
@@ -516,6 +516,26 @@ select:focus-visible {
   background: var(--surface-soft);
   font-size: 13px;
   font-weight: 820;
+}
+
+.topbar-action-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: #52625f;
+  background: #f2f6f5;
+}
+
+.topbar-action-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 #dataSafetyButton::before {
