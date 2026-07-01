@@ -363,7 +363,10 @@ async function run() {
     await assertVisibleText(page, "#detailsSubtitle", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#detailsHeaderStatus", "Zakazano");
     await assertVisibleText(page, "#detailsStatus", "Zakazano");
-    await openHistoryPanel(page);
+    await assertVisibleText(page, "#moreDetailsButton", "Više");
+    assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), false);
+    await page.click("#moreDetailsButton");
+    assert.equal(await page.locator("#historyPanel").evaluate((element) => element.open), true);
     await assertVisibleText(page, "#detailsHistory", "Zapis stvoren");
 
     await page.click("#editButton");

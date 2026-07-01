@@ -285,7 +285,8 @@
     detailsHistory: document.getElementById("detailsHistory"),
     editButton: document.getElementById("editButton"),
     restoreButton: document.getElementById("restoreButton"),
-    deleteButton: document.getElementById("deleteButton")
+    deleteButton: document.getElementById("deleteButton"),
+    moreDetailsButton: document.getElementById("moreDetailsButton")
   };
 
   const startOfToday = stripTime(new Date());
@@ -375,6 +376,7 @@
     els.editButton.addEventListener("click", startEditSelected);
     els.deleteButton.addEventListener("click", deleteSelected);
     els.restoreButton.addEventListener("click", restoreSelected);
+    els.moreDetailsButton.addEventListener("click", toggleHistoryPanel);
     els.showDeletedToggle.addEventListener("change", () => {
       state.showDeleted = els.showDeletedToggle.checked;
       const selected = state.hearings.find((hearing) => hearing.id === state.selectedId);
@@ -2132,6 +2134,15 @@
     els.editButton.hidden = deleted;
     els.deleteButton.hidden = deleted;
     els.restoreButton.hidden = !deleted;
+    els.moreDetailsButton.hidden = false;
+  }
+
+  function toggleHistoryPanel() {
+    if (!getSelectedHearing()) return;
+    els.historyPanel.open = !els.historyPanel.open;
+    if (els.historyPanel.open) {
+      els.historyPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }
 
   function renderHistory(hearing) {
