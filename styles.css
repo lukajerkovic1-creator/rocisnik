@@ -1867,6 +1867,46 @@ select.invalid {
     display: none;
   }
 
+  .schedule-searchbar {
+    margin-bottom: 6px;
+  }
+
+  .hearing-button {
+    min-height: 44px;
+    padding: 4px 14px;
+  }
+
+  .hearing-time {
+    font-size: 17px;
+  }
+
+  .hearing-case {
+    font-size: 13px;
+  }
+
+  .hearing-parties {
+    font-size: 11px;
+  }
+
+  .quick-add-button {
+    min-height: 32px;
+    margin-top: 4px;
+  }
+
+  .quick-add-button span {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+  }
+
+  .quick-add-button strong {
+    font-size: 12px;
+  }
+
+  .quick-add-button small {
+    font-size: 10px;
+  }
+
   .search-panel.mobile-view {
     display: grid;
     padding-top: 0;

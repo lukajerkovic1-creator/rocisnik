@@ -141,6 +141,7 @@ async function run() {
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
       const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
+      const quickAdd = document.querySelector(".quick-add-button")?.getBoundingClientRect();
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
@@ -158,7 +159,8 @@ async function run() {
         searchHeadingHiddenOnDesktop: searchHeading ? searchHeading.height === 0 : false,
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
-        searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false
+        searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false,
+        quickAddCompact: quickAdd ? quickAdd.height <= 36 : false
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
@@ -174,6 +176,7 @@ async function run() {
     assert.equal(desktopLayout.datePresetsCompact, true);
     assert.equal(desktopLayout.searchActionsBeforePresets, true);
     assert.equal(desktopLayout.searchActionsInFirstViewport, true);
+    assert.equal(desktopLayout.quickAddCompact, true);
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
@@ -222,6 +225,7 @@ async function run() {
     await assertVisibleText(page, "#summaryActiveCount", "1");
     await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
     assert.equal(await page.locator(".hearing-button .row-more").count(), 1);
+    assert.equal(await page.locator(".hearing-button").first().evaluate((element) => element.getBoundingClientRect().height <= 46), true);
     await page.click("#quickAddButton");
     assert.equal(await page.locator("#plaintiff").evaluate((input) => document.activeElement === input), true);
 
