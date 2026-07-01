@@ -1,4 +1,4 @@
-const CACHE_NAME = "rocisnik-v24";
+const CACHE_NAME = "rocisnik-v25";
 const APP_SHELL = [
   "./",
   "./index.html",

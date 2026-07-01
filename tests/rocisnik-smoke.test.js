@@ -167,6 +167,9 @@ async function run() {
     await page.click("#submitButton");
     await assertVisibleText(page, "#formMessage", "Ročište je dodano.");
     await assertVisibleText(page, "#summaryActiveCount", "1");
+    await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
+    await page.click("#quickAddButton");
+    assert.equal(await page.locator("#plaintiff").evaluate((input) => document.activeElement === input), true);
 
     let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings.length, 1);

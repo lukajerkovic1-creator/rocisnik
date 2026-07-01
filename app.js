@@ -200,6 +200,7 @@
     yearInput: document.getElementById("yearInput"),
     jumpButton: document.getElementById("jumpButton"),
     todayButton: document.getElementById("todayButton"),
+    quickAddButton: document.getElementById("quickAddButton"),
     loadMoreButton: document.getElementById("loadMoreButton"),
     loadMoreWrap: document.querySelector(".load-more-wrap"),
     scheduleViewButtons: Array.from(document.querySelectorAll("[data-schedule-view]")),
@@ -345,6 +346,7 @@
       setMobileView("form");
       render();
     });
+    els.quickAddButton.addEventListener("click", goToNewHearing);
     els.editButton.addEventListener("click", startEditSelected);
     els.deleteButton.addEventListener("click", deleteSelected);
     els.restoreButton.addEventListener("click", restoreSelected);
@@ -1885,13 +1887,15 @@
     if (showPastBadge) button.classList.add("past-hearing");
     button.classList.add(getStatusClass(hearing.status));
     button.innerHTML = `
-      <span class="hearing-time">${formatTime(date)}</span>
+      <span class="hearing-timeblock">
+        <span class="hearing-date-inline">${escapeHtml(dateLabel)}</span>
+        <span class="hearing-time">${formatTime(date)}</span>
+      </span>
       <span class="hearing-body">
         <span class="hearing-case">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}</span>
         <span class="hearing-parties">${escapeHtml(hearing.plaintiff)} - ${escapeHtml(hearing.defendant)}</span>
-        <span class="hearing-subject">${escapeHtml(subject)}</span>
-        <span class="hearing-date-inline">${escapeHtml(dateLabel)}</span>
       </span>
+      <span class="hearing-subject">${escapeHtml(subject)}</span>
       <span class="hearing-badges">
         ${createStatusBadgeHtml(hearing.status)}
         ${showPastBadge ? `<span class="past-badge">Prošlo</span>` : ""}

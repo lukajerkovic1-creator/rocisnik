@@ -15,57 +15,24 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="brand-block">
-          <h1>Ročišnik</h1>
-          <p class="app-subtitle">Osobni raspored sudskih ročišta</p>
-          <p id="rangeLabel">Ovaj i sljedeći tjedan</p>
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3v18M6 7h12M7 7l-4 7h8L7 7Zm10 0-4 7h8l-4-7ZM9 21h6" />
+            </svg>
+          </div>
+          <div>
+            <h1>Ročišnik</h1>
+            <p class="app-subtitle">Osobni raspored sudskih ročišta</p>
+            <p id="rangeLabel">Ovaj i sljedeći tjedan</p>
+          </div>
         </div>
         <div class="topbar-actions">
-          <button class="text-button" type="button" id="dataSafetyButton">Sigurnost podataka</button>
+          <button class="text-button" type="button" id="dataSafetyButton">Sigurnosna kopija</button>
           <button class="text-button" type="button" id="securityNoticeButton">Zaštita podataka</button>
-          <button class="text-button" type="button" id="onboardingButton">Kako koristiti</button>
+          <button class="text-button" type="button" id="onboardingButton">Pomoć</button>
           <button class="primary-button topbar-primary" type="button" id="clearSelectionButton">Novo ročište</button>
         </div>
       </header>
-
-      <section class="data-notice" id="dataNotice" aria-labelledby="dataNoticeTitle">
-        <div class="data-notice-body">
-          <h2 id="dataNoticeTitle">Sigurnost podataka</h2>
-          <p>Podaci se čuvaju samo u ovom pregledniku i ne sinkroniziraju se između uređaja. Redovito napravite izvoz/sigurnosnu kopiju. Za stvarne i osjetljive podatke koristite samo zaštićen uređaj.</p>
-          <div class="backup-tools" aria-label="Izvoz i uvoz podataka">
-            <button class="secondary-button compact-button" type="button" id="exportJsonButton">Izvezi JSON</button>
-            <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
-            <div class="import-controls">
-              <fieldset class="import-mode" aria-label="Način uvoza">
-                <label>
-                  <input type="radio" name="importMode" value="append" checked>
-                  <span>Dodaj u postojeće podatke</span>
-                </label>
-                <label>
-                  <input type="radio" name="importMode" value="replace">
-                  <span>Zamijeni postojeće podatke</span>
-                </label>
-              </fieldset>
-              <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
-              <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
-              <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
-              <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
-            </div>
-          </div>
-          <p class="backup-note">Šifrirani backup je sigurnija opcija. Lozinku nije moguće vratiti ako je zaboravite. Bez lozinke nije moguće otvoriti šifrirani backup.</p>
-          <div class="backup-metadata" id="backupMetadata" aria-live="polite">
-            <div>
-              <span>Zadnji izvoz JSON-a</span>
-              <strong id="lastJsonExportAt">nikada</strong>
-            </div>
-            <div>
-              <span>Zadnji uvoz JSON-a</span>
-              <strong id="lastJsonImportAt">nikada</strong>
-            </div>
-          </div>
-          <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
-        </div>
-        <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
-      </section>
 
       <section class="security-prompt" id="securityPrompt" aria-labelledby="securityPromptTitle" hidden>
         <div>
@@ -279,6 +246,11 @@
           </div>
 
           <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
+          <button class="quick-add-button" type="button" id="quickAddButton">
+            <span aria-hidden="true">+</span>
+            <strong>Dodaj novo ročište</strong>
+            <small>Kliknite za brzo dodavanje</small>
+          </button>
           <div class="load-more-wrap">
             <button class="secondary-button" type="button" id="loadMoreButton">Učitaj još 6 mjeseci</button>
           </div>
@@ -418,6 +390,46 @@
             </div>
           </div>
         </aside>
+
+        <section class="data-notice" id="dataNotice" aria-labelledby="dataNoticeTitle">
+          <div class="data-notice-body">
+            <h2 id="dataNoticeTitle">Sigurnosna kopija i podaci</h2>
+            <p>Podaci se čuvaju samo u ovom pregledniku. Redovito napravite izvoz/sigurnosnu kopiju.</p>
+            <div class="backup-metadata" id="backupMetadata" aria-live="polite">
+              <div>
+                <span>Zadnji izvoz JSON-a</span>
+                <strong id="lastJsonExportAt">nikada</strong>
+              </div>
+              <div>
+                <span>Zadnji uvoz JSON-a</span>
+                <strong id="lastJsonImportAt">nikada</strong>
+              </div>
+            </div>
+            <div class="backup-tools" aria-label="Izvoz i uvoz podataka">
+              <button class="secondary-button compact-button" type="button" id="exportJsonButton">Izvezi JSON</button>
+              <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
+              <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
+              <div class="import-controls">
+                <fieldset class="import-mode" aria-label="Način uvoza">
+                  <label>
+                    <input type="radio" name="importMode" value="append" checked>
+                    <span>Dodaj u postojeće podatke</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="importMode" value="replace">
+                    <span>Zamijeni postojeće podatke</span>
+                  </label>
+                </fieldset>
+                <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
+                <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
+                <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
+              </div>
+            </div>
+            <p class="backup-note">JSON backup može sadržavati osjetljive podatke. Šifrirani backup je sigurnija opcija.</p>
+            <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
+          </div>
+          <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
+        </section>
       </main>
     </div>
 

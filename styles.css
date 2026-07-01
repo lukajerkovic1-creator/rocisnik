@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  --bg: #f5f7f8;
+  --bg: #f6f8fa;
   --surface: #ffffff;
   --surface-soft: #f9fbfb;
   --text: #172321;
@@ -13,7 +13,7 @@
   --warning: #b26b23;
   --danger: #b53b3b;
   --danger-soft: #fff0f0;
-  --shadow: 0 18px 48px rgba(24, 48, 44, 0.09);
+  --shadow: 0 12px 34px rgba(24, 48, 44, 0.08);
   --radius: 8px;
   --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -69,7 +69,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 22px;
+  padding: 16px;
 }
 
 .topbar {
@@ -111,11 +111,11 @@ select:focus-visible {
   justify-content: space-between;
   gap: 20px;
   max-width: 1440px;
-  margin: 0 auto 14px;
-  padding: 18px 20px;
+  margin: 0 auto 12px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f9fbfb 100%);
+  border-radius: 10px;
+  background: #fff;
   box-shadow: var(--shadow);
 }
 
@@ -128,7 +128,32 @@ select:focus-visible {
 }
 
 .brand-block {
-  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.brand-mark svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .topbar h1,
@@ -139,21 +164,22 @@ select:focus-visible {
 }
 
 .topbar h1 {
-  font-size: 32px;
+  font-size: 24px;
   line-height: 1.05;
   font-weight: 760;
 }
 
 .app-subtitle {
-  margin-top: 5px !important;
+  margin-top: 2px !important;
   color: #263633 !important;
   font-size: 15px;
   font-weight: 720;
 }
 
 .topbar-primary {
+  order: -1;
   flex: 0 0 auto;
-  min-width: 138px;
+  min-width: 142px;
   min-height: 46px;
 }
 
@@ -167,18 +193,17 @@ select:focus-visible {
 
 .data-notice {
   width: 100%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   max-width: 1440px;
   margin: 0 auto 14px;
-  padding: 12px 14px;
-  border: 1px solid #e7cda8;
-  border-radius: var(--radius);
-  color: #4d351c;
-  background: #fff8ec;
-  box-shadow: 0 10px 28px rgba(98, 68, 29, 0.08);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: #fff;
+  box-shadow: var(--shadow);
 }
 
 .security-prompt {
@@ -228,16 +253,28 @@ select:focus-visible {
   font-size: 13px;
 }
 
+.data-notice .notice-close {
+  align-self: start;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .data-notice-body {
   min-width: 0;
 }
 
 .backup-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
   margin-top: 12px;
+}
+
+#exportEncryptedButton,
+.import-controls {
+  grid-column: 1 / -1;
 }
 
 .backup-reminder-actions {
@@ -335,15 +372,12 @@ select:focus-visible {
 }
 
 .import-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
 }
 
 .import-mode {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px 12px;
   margin: 0;
   padding: 0;
@@ -354,8 +388,8 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 38px;
-  color: #4d351c;
+  min-height: 30px;
+  color: #3b4b48;
   font-size: 13px;
   font-weight: 640;
 }
@@ -448,8 +482,45 @@ select:focus-visible {
 
 .text-button {
   background: transparent;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: #41504d;
+  text-decoration: none;
+}
+
+.topbar-actions .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.topbar-actions .text-button::before {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--surface-soft);
+  font-size: 13px;
+  font-weight: 820;
+}
+
+#dataSafetyButton::before {
+  content: "↧";
+}
+
+#securityNoticeButton::before {
+  content: "i";
+}
+
+#onboardingButton::before {
+  content: "?";
+}
+
+.topbar-primary::before {
+  content: "+";
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .notice-close:hover,
@@ -472,11 +543,11 @@ select:focus-visible {
 
 .overview-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "label count"
-    "meta count";
-  gap: 2px 12px;
+    "icon label count"
+    "icon meta count";
+  gap: 2px 14px;
   align-items: center;
   min-height: 86px;
   padding: 14px 16px;
@@ -487,6 +558,38 @@ select:focus-visible {
   background: var(--surface);
   box-shadow: 0 10px 28px rgba(24, 48, 44, 0.07);
   text-align: left;
+}
+
+.overview-card::before {
+  content: "";
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-size: 15px;
+  font-weight: 820;
+}
+
+.overview-card[data-schedule-view="today"]::before {
+  content: "D";
+}
+
+.overview-card[data-schedule-view="week"]::before {
+  content: "7";
+}
+
+.overview-card[data-schedule-view="next30"]::before {
+  content: "30";
+}
+
+.overview-card-static::before {
+  content: "Σ";
+  color: #59635f;
+  background: #eef2f1;
 }
 
 .overview-card:not(.overview-card-static):hover,
@@ -526,11 +629,12 @@ select:focus-visible {
 .workspace {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(286px, 340px) minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 400px);
   grid-template-areas:
-    "entry schedule details"
-    "search schedule details";
-  gap: 14px;
+    "schedule details"
+    "search data"
+    "entry data";
+  gap: 12px;
   max-width: 1440px;
   margin: 0 auto 14px;
   align-items: start;
@@ -572,6 +676,13 @@ select:focus-visible {
   grid-area: details;
   position: sticky;
   top: 14px;
+}
+
+.workspace .data-notice {
+  grid-area: data;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .schedule-view-tabs {
@@ -631,6 +742,7 @@ select:focus-visible {
 
 .form-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 12px;
 }
 
@@ -856,16 +968,16 @@ select.invalid {
 }
 
 .search-grid {
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   align-items: start;
 }
 
 .search-actions {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(160px, 220px) minmax(150px, 190px);
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .date-presets {
@@ -899,12 +1011,12 @@ select.invalid {
 
 .search-actions .primary-button {
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
 }
 
 .search-panel input {
-  min-height: 48px;
-  font-size: 16px;
+  min-height: 42px;
+  font-size: 14px;
 }
 
 .search-results {
@@ -1084,18 +1196,18 @@ select.invalid {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .day-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 164px;
+  min-height: auto;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-soft);
+  border-radius: 10px;
+  background: #fff;
   overflow: hidden;
 }
 
@@ -1109,7 +1221,8 @@ select.invalid {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 14px 10px;
+  min-height: 48px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   background: #fff;
 }
@@ -1130,20 +1243,22 @@ select.invalid {
 
 .hearing-list {
   display: grid;
-  gap: 9px;
-  padding: 10px;
+  gap: 0;
+  padding: 0;
 }
 
 .hearing-button {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px 10px;
+  grid-template-columns: 112px minmax(190px, 1.15fr) minmax(160px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
   width: 100%;
-  min-height: 88px;
-  padding: 10px;
-  border: 1px solid var(--border);
+  min-height: 70px;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--border);
   border-left: 4px solid var(--accent);
-  border-radius: 10px;
+  border-radius: 0;
   color: var(--text);
   background: #fff;
   text-align: left;
@@ -1151,22 +1266,22 @@ select.invalid {
 
 .hearing-button:hover,
 .hearing-button.selected {
-  border-color: rgba(15, 107, 99, 0.44);
+  border-left-color: var(--accent-strong);
   background: var(--accent-soft);
 }
 
+.hearing-timeblock {
+  display: grid;
+  gap: 2px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+}
+
 .hearing-time {
-  grid-row: 1 / 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 52px;
-  height: 34px;
-  border-radius: 999px;
-  background: var(--accent-soft);
   color: var(--accent-strong);
-  font-size: 13px;
-  font-weight: 780;
+  font-size: 21px;
+  line-height: 1.05;
+  font-weight: 820;
 }
 
 .hearing-body {
@@ -1178,14 +1293,14 @@ select.invalid {
 .hearing-case {
   color: var(--text);
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .hearing-parties {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 740;
 }
 
@@ -1199,10 +1314,10 @@ select.invalid {
 }
 
 .hearing-badges {
-  grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  justify-content: flex-end;
   align-items: center;
 }
 
@@ -1210,6 +1325,52 @@ select.invalid {
   padding: 10px;
   color: #93a09d;
   font-size: 12px;
+}
+
+.quick-add-button {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  gap: 0 10px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 8px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--accent-strong);
+  background: #fff;
+  text-align: left;
+}
+
+.quick-add-button span {
+  grid-row: 1 / 3;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  align-self: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.quick-add-button strong {
+  align-self: end;
+  font-size: 14px;
+}
+
+.quick-add-button small {
+  align-self: start;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.quick-add-button:hover,
+.quick-add-button:focus-visible {
+  border-color: rgba(15, 107, 99, 0.44);
+  background: var(--accent-soft);
 }
 
 .month-break {
@@ -1463,7 +1624,7 @@ select.invalid {
 
 .mobile-tabs {
   width: 100%;
-  display: grid;
+  display: none;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   max-width: 1440px;
@@ -1499,7 +1660,8 @@ select.invalid {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
     grid-template-areas:
       "schedule details"
-      "entry search";
+      "search data"
+      "entry data";
   }
 
   .details-panel {
@@ -1507,7 +1669,7 @@ select.invalid {
   }
 
   .calendar-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .search-grid {
@@ -1570,6 +1732,7 @@ select.invalid {
 
   .data-notice {
     display: grid;
+    grid-template-columns: 1fr;
     gap: 10px;
     margin-bottom: 10px;
     padding: 12px;
@@ -1704,7 +1867,8 @@ select.invalid {
   .entry-panel,
   .search-panel,
   .details-panel,
-  .schedule-panel {
+  .schedule-panel,
+  .workspace .data-notice {
     padding: 14px;
   }
 
@@ -1723,7 +1887,9 @@ select.invalid {
   }
 
   .jump-controls,
-  .search-grid {
+  .search-grid,
+  .form-grid,
+  .search-actions {
     grid-template-columns: 1fr;
   }
 
@@ -1736,7 +1902,27 @@ select.invalid {
   }
 
   .hearing-button {
+    grid-template-columns: 1fr;
+    gap: 6px;
     min-height: 58px;
+    padding: 12px;
+  }
+
+  .hearing-timeblock {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .hearing-time {
+    font-size: 18px;
+  }
+
+  .hearing-badges {
+    justify-content: flex-start;
   }
 
   .form-actions,
@@ -1758,7 +1944,7 @@ select.invalid {
   }
 
   .search-actions {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .search-result-button {
