@@ -135,6 +135,7 @@ async function run() {
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
       const next30Tab = document.querySelector('.schedule-view-tabs [data-schedule-view="next30"]')?.getBoundingClientRect();
       const overviewCardStyle = getComputedStyle(document.querySelector(".overview-card"));
+      const activeOverviewCardStyle = getComputedStyle(document.querySelector(".overview-card.active"));
       const quickSearchStyle = getComputedStyle(document.querySelector("#scheduleQuickSearch"));
       const filterIconStyle = getComputedStyle(document.querySelector("#scheduleFilterButton"), "::before");
       const topNewIconStyle = getComputedStyle(document.querySelector("#clearSelectionButton"), "::before");
@@ -159,6 +160,8 @@ async function run() {
           : false,
         next30TabSingleLine: next30Tab ? next30Tab.height <= 40 : false,
         overviewCardsHaveNoHeavySideAccent: Number.parseFloat(overviewCardStyle.borderLeftWidth) <= 1,
+        activeOverviewCardStaysNeutral: activeOverviewCardStyle.borderTopColor === overviewCardStyle.borderTopColor
+          && activeOverviewCardStyle.backgroundColor === overviewCardStyle.backgroundColor,
         quickSearchHasIcon: quickSearchStyle.backgroundImage.includes("data:image/svg+xml")
           && Number.parseFloat(quickSearchStyle.paddingLeft) >= 34,
         topNewButtonHasIcon: topNewIconStyle.content === '""'
@@ -182,6 +185,7 @@ async function run() {
     assert.equal(desktopLayout.scheduleTabsShareRowWithDatebar, true);
     assert.equal(desktopLayout.next30TabSingleLine, true);
     assert.equal(desktopLayout.overviewCardsHaveNoHeavySideAccent, true);
+    assert.equal(desktopLayout.activeOverviewCardStaysNeutral, true);
     assert.equal(desktopLayout.quickSearchHasIcon, true);
     assert.equal(desktopLayout.topNewButtonHasIcon, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);

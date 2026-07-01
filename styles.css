@@ -743,8 +743,7 @@ select:focus-visible {
 }
 
 .overview-card:not(.overview-card-static):hover,
-.overview-card:not(.overview-card-static):focus-visible,
-.overview-card.active {
+.overview-card:not(.overview-card-static):focus-visible {
   border-color: rgba(15, 107, 99, 0.26);
   background: var(--surface);
 }
