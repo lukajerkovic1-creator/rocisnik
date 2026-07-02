@@ -2757,6 +2757,8 @@ select.invalid {
 }
 
 .modal-panel {
+  position: relative;
+  z-index: 101;
   width: min(560px, 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -3483,4 +3485,12 @@ select.invalid {
     0 0 0 3px rgba(15, 107, 99, 0.14),
     var(--shadow) !important;
   background-color: rgba(15, 107, 99, 0.025);
+}
+
+.modal-panel.focus-panel:focus-within,
+.modal-panel.focus-panel.is-active-panel {
+  background: var(--surface) !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 107, 99, 0.16),
+    0 24px 70px rgba(23, 35, 33, 0.24) !important;
 }

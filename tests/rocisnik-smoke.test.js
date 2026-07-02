@@ -95,6 +95,7 @@ async function run() {
     assert.equal(await page.locator("#onboardingModal").isHidden(), true);
     await page.click("#onboardingButton");
     await assertActivePanel(page, "#onboardingModal .modal-panel");
+    await assertOpaqueModalPanel(page, "#onboardingModal .modal-panel");
     await assertVisibleText(page, "#onboardingModal", "Za osjetljive podatke koristite samo zaštićen uređaj.");
     await page.click("#onboardingSkipButton");
     assert.equal(await page.locator("#onboardingModal").isHidden(), true);
@@ -1040,6 +1041,20 @@ async function assertActivePanel(page, selector) {
   }, selector);
   const activeCount = await page.locator(".is-active-panel").count();
   assert.equal(activeCount, 1);
+}
+
+async function assertOpaqueModalPanel(page, selector) {
+  const modalStyle = await page.locator(selector).evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      backgroundColor: style.backgroundColor,
+      coversContent: style.backgroundColor === "rgb(255, 255, 255)" || style.backgroundColor === "rgb(250, 253, 252)",
+      visible: rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.bottom <= window.innerHeight
+    };
+  });
+  assert.equal(modalStyle.coversContent, true, `Modal should be opaque, got ${modalStyle.backgroundColor}`);
+  assert.equal(modalStyle.visible, true);
 }
 
 async function openHistoryPanel(page) {
