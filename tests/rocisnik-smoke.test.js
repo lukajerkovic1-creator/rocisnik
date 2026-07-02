@@ -127,16 +127,17 @@ async function run() {
     await assertVisibleText(page, "#summaryActiveMeta", "zakazano");
     await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
     await assertVisibleText(page, ".schedule-empty", "Za prvi unos koristite gornji gumb Novo ročište.");
-    await assertVisibleText(page, ".search-panel .utility-tabs", "Pretraživanje");
-    await assertVisibleText(page, ".search-panel .utility-tabs", "Podsjetnici");
     await assertSingleNewHearingButton(page);
-    await assertVisibleText(page, ".search-grid", "Broj predmeta");
-    await assertVisibleText(page, ".search-grid", "Predmet spora");
-    await assertVisibleText(page, ".search-grid", "Raspon vrijednosti");
-    await assertVisibleText(page, ".search-grid", "Prikaži obrisane");
+    await assertVisibleText(page, ".mobile-tabs", "Raspored");
+    assert.equal(await page.locator('.mobile-tab[data-mobile-view="twoWeek"]').count(), 0);
+    assert.equal(await page.locator(".two-week-panel").isVisible(), true);
+    assert.equal(await page.locator(".schedule-panel").isVisible(), true);
+    assert.equal(await page.locator(".search-panel").isVisible(), false);
     const desktopLayout = await page.evaluate(() => {
       const utilityTabs = document.querySelector(".search-panel .utility-tabs")?.getBoundingClientRect();
       const searchPanel = document.querySelector(".search-panel")?.getBoundingClientRect();
+      const twoWeekPanel = document.querySelector(".two-week-panel")?.getBoundingClientRect();
+      const schedulePanel = document.querySelector(".schedule-panel")?.getBoundingClientRect();
       const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
       const dateLabel = document.querySelector(".schedule-date-label")?.getBoundingClientRect();
@@ -198,8 +199,10 @@ async function run() {
       });
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
-        utilityTabsInFirstViewport: utilityTabs ? utilityTabs.top < window.innerHeight : false,
-        searchPanelStartsInFirstViewport: searchPanel ? searchPanel.top < window.innerHeight : false,
+        combinedScheduleOrder: twoWeekPanel && schedulePanel
+          ? twoWeekPanel.height > 0 && schedulePanel.height > 0 && twoWeekPanel.top < schedulePanel.top
+          : false,
+        searchHiddenByDefault: searchPanel ? getComputedStyle(document.querySelector(".search-panel")).display === "none" : false,
         scheduleTabsShareRowWithDatebar: scheduleTabs && scheduleDatebar
           ? Math.abs(scheduleTabs.top - scheduleDatebar.top) <= 2
           : false,
@@ -236,8 +239,7 @@ async function run() {
         importSummaryIsSubtle: importSummary ? importSummary.height <= 32 : false,
         searchHeadingHiddenOnDesktop: searchHeading ? searchHeading.height === 0 : false,
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
-        searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
-        searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false,
+        searchActionsBeforePresets: searchActions && datePreset ? searchActions.top <= datePreset.top : false,
         searchGridHasWideDesktopColumns: searchGridColumns === 5,
         quickAddRemoved: quickAdd === null,
         reminderTabHasSvgIcon: reminderIcon ? reminderIcon.width === 16 && reminderIcon.height === 16 : false,
@@ -245,8 +247,8 @@ async function run() {
       };
     });
     assert.equal(desktopLayout.noHorizontalScroll, true);
-    assert.equal(desktopLayout.utilityTabsInFirstViewport, true);
-    assert.equal(desktopLayout.searchPanelStartsInFirstViewport, true);
+    assert.equal(desktopLayout.combinedScheduleOrder, true);
+    assert.equal(desktopLayout.searchHiddenByDefault, true);
     assert.equal(desktopLayout.scheduleTabsShareRowWithDatebar, true);
     assert.equal(desktopLayout.dateLabelHasCalendarIcon, true);
     assert.equal(desktopLayout.dateLabelSingleLine, true);
@@ -266,31 +268,27 @@ async function run() {
     assert.equal(desktopLayout.importSummaryIsSubtle, true);
     assert.equal(desktopLayout.searchHeadingHiddenOnDesktop, true);
     assert.equal(desktopLayout.datePresetsCompact, true);
-    assert.equal(desktopLayout.searchActionsBeforePresets, true);
-    assert.equal(desktopLayout.searchActionsInFirstViewport, true);
-    assert.equal(desktopLayout.searchGridHasWideDesktopColumns, true);
     assert.equal(desktopLayout.quickAddRemoved, true);
-    assert.equal(desktopLayout.reminderTabHasSvgIcon, true);
     assert.equal(desktopLayout.backupButtonsHaveIcons, true);
 
     await page.setViewportSize({ width: 1213, height: 816 });
     const referenceViewportLayout = await page.evaluate(() => {
       const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
-      const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
       const primaryTabs = document.querySelector(".mobile-tabs")?.getBoundingClientRect();
       const allTab = document.querySelector('.schedule-view-tabs [data-schedule-view="all"]')?.getBoundingClientRect();
+      const searchPanel = document.querySelector(".search-panel");
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         scheduleTabsDoNotOverlapDatebar: scheduleTabs && scheduleDatebar ? scheduleTabs.right <= scheduleDatebar.left : false,
-        searchActionsInReferenceViewport: searchActions ? searchActions.bottom <= window.innerHeight : false,
+        searchHiddenByDefault: searchPanel ? getComputedStyle(searchPanel).display === "none" : false,
         primaryTabsInReferenceViewport: primaryTabs ? primaryTabs.top < window.innerHeight && primaryTabs.bottom < window.innerHeight : false,
         allTabReadable: allTab ? allTab.width >= 58 : false
       };
     });
     assert.equal(referenceViewportLayout.noHorizontalScroll, true);
     assert.equal(referenceViewportLayout.scheduleTabsDoNotOverlapDatebar, true);
-    assert.equal(referenceViewportLayout.searchActionsInReferenceViewport, true);
+    assert.equal(referenceViewportLayout.searchHiddenByDefault, true);
     assert.equal(referenceViewportLayout.primaryTabsInReferenceViewport, true);
     assert.equal(referenceViewportLayout.allTabReadable, true);
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -343,8 +341,9 @@ async function run() {
     await assertActivePanel(page, ".search-panel");
     await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
+    await page.click('.mobile-tab[data-mobile-view="schedule"]');
     await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
-    await assertActivePanel(page, ".schedule-panel");
+    assert.equal(await page.locator(".schedule-panel").isVisible(), true);
 
     assert.equal(await page.locator(".reminders-panel").isVisible(), false);
     await page.click('.entry-panel [data-utility-view="reminders"]');
@@ -483,14 +482,9 @@ async function run() {
       localStorage.setItem(key, JSON.stringify([...existing, ...records]));
     }, { key: STORAGE_KEY, records: seededHearings });
     await page.reload({ waitUntil: "domcontentloaded" });
-    await assertVisibleText(page, ".mobile-tabs", "Ovaj i sljedeći tjedan");
-    const twoWeekTabOrder = await page.evaluate(() => {
-      const twoWeek = document.querySelector('.mobile-tab[data-mobile-view="twoWeek"]')?.getBoundingClientRect();
-      const schedule = document.querySelector('.mobile-tab[data-mobile-view="schedule"]')?.getBoundingClientRect();
-      return Boolean(twoWeek && schedule && twoWeek.left < schedule.left);
-    });
-    assert.equal(twoWeekTabOrder, true);
-    await page.click('.mobile-tab[data-mobile-view="twoWeek"]');
+    await assertVisibleText(page, ".mobile-tabs", "Raspored");
+    assert.equal(await page.locator('.mobile-tab[data-mobile-view="twoWeek"]').count(), 0);
+    await page.click('.mobile-tab[data-mobile-view="schedule"]');
     await assertVisibleText(page, "#twoWeekTitle", "Ovaj i sljedeći tjedan");
     await assertVisibleText(page, "#twoWeekSummary", "Ukupno rasprava");
     await assertVisibleText(page, "#twoWeekCalendar", "Dva Tjedna Sljedeci");
@@ -526,7 +520,8 @@ async function run() {
     await assertActivePanel(page, ".details-panel");
     assert.equal(await page.locator(".two-week-panel").isVisible(), true);
     await page.click('.mobile-tab[data-mobile-view="schedule"]');
-    await assertActivePanel(page, ".schedule-panel");
+    assert.equal(await page.locator(".two-week-panel").isVisible(), true);
+    assert.equal(await page.locator(".schedule-panel").isVisible(), true);
     await assertScheduleViewActive(page, "today");
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleExcludes(page, "Datum Deset");
@@ -592,6 +587,7 @@ async function run() {
     await assertScheduleExcludes(page, "Datum Otkazano");
     await assertScheduleExcludes(page, "Datum Obrisano");
     await page.click('.schedule-view-tabs [data-schedule-view="all"]');
+    await page.click('.mobile-tab[data-mobile-view="search"]');
 
     await page.fill("#filterDateFrom", toDateKey(today));
     await page.fill("#filterDateTo", toDateKey(tomorrow));
@@ -923,8 +919,10 @@ async function run() {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator(".mobile-tabs").isVisible(), true);
-    await page.click('.mobile-tab[data-mobile-view="twoWeek"]');
+    assert.equal(await page.locator('.mobile-tab[data-mobile-view="twoWeek"]').count(), 0);
+    await page.click('.mobile-tab[data-mobile-view="schedule"]');
     assert.equal(await page.locator(".two-week-panel").isVisible(), true);
+    assert.equal(await page.locator(".schedule-panel").isVisible(), true);
     await assertActivePanel(page, ".two-week-panel");
     const twoWeekMobileLayout = await page.evaluate(() => {
       const calendar = document.querySelector(".two-week-calendar");
@@ -934,15 +932,12 @@ async function run() {
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         verticalList: Boolean(firstCard && secondCard && secondCard.top > firstCard.bottom),
-        fullWidthFirstTab: document.querySelector('.mobile-tab[data-mobile-view="twoWeek"]')?.getBoundingClientRect().width > 300,
         gridColumns: calendar ? getComputedStyle(calendar).gridTemplateColumns.split(" ").filter(Boolean).length : 0
       };
     });
     assert.equal(twoWeekMobileLayout.noHorizontalScroll, true);
     assert.equal(twoWeekMobileLayout.verticalList, true);
-    assert.equal(twoWeekMobileLayout.fullWidthFirstTab, true);
     assert.equal(twoWeekMobileLayout.gridColumns, 1);
-    await page.click('.mobile-tab[data-mobile-view="schedule"]');
     assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="today"]').isVisible(), true);
     assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="next30"]').isVisible(), true);
     await page.click('.mobile-tab[data-mobile-view="search"]');

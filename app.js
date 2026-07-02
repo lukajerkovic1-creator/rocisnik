@@ -129,7 +129,7 @@
     selectedId: null,
     editingId: null,
     currentMobileView: "schedule",
-    currentUtilityView: "search",
+    currentUtilityView: "",
     scheduleView: "next30",
     scheduleToolsOpen: false,
     encryptedBackupAction: "",
@@ -2066,7 +2066,7 @@
       <span class="two-week-hearing-parties">${escapeHtml(parties)}</span>
       ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
     `;
-    button.addEventListener("click", () => openHearingDetails(hearing.id, "twoWeek"));
+    button.addEventListener("click", () => openHearingDetails(hearing.id, "schedule"));
     return button;
   }
 
@@ -2657,8 +2657,7 @@
   function getPanelForMobileView(view) {
     if (view === "form") return els.entryPanel;
     if (view === "search") return state.currentUtilityView === "reminders" ? (els.remindersPanel || els.searchPanel) : els.searchPanel;
-    if (view === "schedule") return els.schedulePanel;
-    if (view === "twoWeek") return els.twoWeekPanel;
+    if (view === "schedule") return els.twoWeekPanel || els.schedulePanel;
     if (view === "details") return els.detailsPanel;
     return null;
   }

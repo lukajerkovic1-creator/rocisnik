@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=83">
+    <link rel="stylesheet" href="styles.css?v=84">
   </head>
   <body>
     <div class="app-shell">
@@ -103,7 +103,6 @@
       </section>
 
       <nav class="mobile-tabs" aria-label="Mobilna navigacija">
-        <button class="mobile-tab" type="button" data-mobile-view="twoWeek">Ovaj i sljedeći tjedan</button>
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
         <button class="mobile-tab" type="button" data-mobile-view="search">Pretraži</button>
         <button class="mobile-tab" type="button" data-mobile-view="details">Detalji</button>
@@ -157,7 +156,7 @@
       </section>
 
       <main class="workspace">
-        <section class="two-week-panel mobile-view" data-view="twoWeek" aria-labelledby="twoWeekTitle">
+        <section class="two-week-panel mobile-view active" data-view="schedule" aria-labelledby="twoWeekTitle">
           <div class="panel-heading two-week-heading">
             <div>
               <h2 id="twoWeekTitle">Ovaj i sljedeći tjedan</h2>
@@ -674,6 +673,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=83"></script>
+    <script src="app.js?v=84"></script>
   </body>
 </html>

@@ -853,8 +853,9 @@ select:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
   grid-template-areas:
+    "twoWeek side"
     "schedule side"
-    "search side";
+    "utility side";
   gap: 10px;
   max-width: 1440px;
   margin: 0 auto 14px;
@@ -896,7 +897,7 @@ select:focus-visible {
 }
 
 .entry-panel {
-  grid-area: search;
+  grid-area: utility;
 }
 
 .entry-panel.new-hearing-focus {
@@ -910,7 +911,7 @@ select:focus-visible {
 }
 
 .search-panel {
-  grid-area: search;
+  grid-area: utility;
   width: 100%;
   justify-self: stretch;
 }
@@ -989,7 +990,7 @@ select:focus-visible {
 }
 
 .two-week-panel {
-  grid-area: schedule;
+  grid-area: twoWeek;
   padding: 14px;
 }
 
@@ -2872,7 +2873,7 @@ select.invalid {
 .mobile-tabs {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(180px, 1.25fr) repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   max-width: 1440px;
   margin: 0 auto 10px;
@@ -2912,8 +2913,9 @@ select.invalid {
   .workspace {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
     grid-template-areas:
+      "twoWeek side"
       "schedule side"
-      "search side";
+      "utility side";
   }
 
   .side-column {
@@ -3117,7 +3119,7 @@ select.invalid {
     top: 0;
     z-index: 10;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     max-width: 1440px;
     margin: 0 auto 10px;
@@ -3126,10 +3128,6 @@ select.invalid {
     border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(10px);
-  }
-
-  .mobile-tab[data-mobile-view="twoWeek"] {
-    grid-column: 1 / -1;
   }
 
   .mobile-tab {
@@ -3326,32 +3324,27 @@ select.invalid {
     display: block;
   }
 
-  .two-week-panel {
-    display: none;
-  }
-
-  body[data-mobile-view="twoWeek"] .workspace {
-    grid-template-areas:
-      "schedule side"
-      "schedule side";
-  }
-
-  body[data-mobile-view="twoWeek"] .two-week-panel {
-    display: block;
-  }
-
-  body[data-mobile-view="twoWeek"] .schedule-panel,
-  body[data-mobile-view="twoWeek"] .entry-panel,
-  body[data-mobile-view="twoWeek"] .search-panel {
-    display: none;
-  }
-
   .utility-view {
     display: none;
   }
 
   .search-panel.mobile-view {
     display: none;
+  }
+
+  body[data-mobile-view="search"] .two-week-panel,
+  body[data-mobile-view="search"] .schedule-panel,
+  body[data-mobile-view="search"] .entry-panel,
+  body[data-mobile-view="form"] .two-week-panel,
+  body[data-mobile-view="form"] .schedule-panel,
+  body[data-mobile-view="form"] .search-panel {
+    display: none;
+  }
+
+  body[data-mobile-view="search"] .workspace,
+  body[data-mobile-view="form"] .workspace {
+    grid-template-areas:
+      "utility side";
   }
 
   .entry-panel.utility-active {
