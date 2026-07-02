@@ -346,7 +346,7 @@ async function run() {
     assert.equal(await page.locator("#importJsonButton").count(), 0);
     assert.equal(await page.locator(".side-column .import-options").count(), 0);
     await assertVisibleText(page, "#dataNotice", "Izvezi šifrirani backup");
-    await assertVisibleText(page, "#dataNotice", "Uvezi šifrirani backup");
+    await assertVisibleText(page, "#dataNotice", "Pregledaj backup");
     await assertVisibleText(page, "#dataNotice", "Izvezi buduća ročišta u kalendar (.ics)");
     assert.equal(await page.locator("#exportFutureIcsButton").isVisible(), true);
     assert.equal(await page.locator("#importEncryptedButton").isVisible(), true);
@@ -918,9 +918,9 @@ async function run() {
     assert.equal(storageAfterEncryptedExport.includes("SigurnaLozinka123!"), false);
 
     const recordsBeforeWrongPassword = await getEncryptedDatabase(page);
-    await page.check('input[name="importMode"][value="replace"]');
     await page.setInputFiles("#importEncryptedFile", encryptedBackupPath);
-    await assertVisibleText(page, "#encryptedBackupModal", "Uvezi šifrirani backup");
+    await page.waitForSelector("#encryptedBackupModal:not([hidden])");
+    await assertVisibleText(page, "#encryptedBackupModal", "Pregled");
     await page.fill("#encryptedPassword", "PogresnaLozinka123!");
     await page.click("#encryptedBackupConfirmButton");
     await page.waitForFunction(() => document.querySelector("#encryptedBackupMessage")?.textContent.includes("Lozinka nije ispravna"));
@@ -929,14 +929,67 @@ async function run() {
 
     await page.fill("#encryptedPassword", "SigurnaLozinka123!");
     await page.click("#encryptedBackupConfirmButton");
-    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Uvoz je dovršen."));
-    await assertVisibleText(page, "#backupMessage", "Uvoz je dovršen.");
+    await page.waitForSelector("#restorePreview:not([hidden])");
+    await assertVisibleText(page, "#restorePreview", "Pregled backupa");
+    await assertVisibleText(page, "#restoreStats", "Ukupno");
+    const hearingsBeforeTestRestore = await getHearings(page);
+    await page.click("#restoreTestButton");
+    await assertVisibleText(page, "#backupMessage", "Backup je");
+    assert.deepEqual(await getHearings(page), hearingsBeforeTestRestore);
+    await page.check('input[name="importMode"][value="replace"]');
+    await page.click("#restoreApplyButton");
+    await assertVisibleText(page, "#backupMessage", "ZAMIJENI");
+    await page.fill("#restoreReplaceConfirm", "ZAMIJENI");
+    await page.click("#restoreApplyButton");
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Restore je"));
+    await assertVisibleText(page, "#backupMessage", "Restore je");
     hearings = await getHearings(page);
     assert.ok(hearings.some((hearing) => hearing.plaintiff === "Croatia osiguranje"));
     assert.ok(hearings.some((hearing) => hearing.history?.some((event) => event.eventType === "imported")));
     const storageAfterEncryptedImport = await page.evaluate(() => Object.values(localStorage).join(" "));
     assert.equal(storageAfterEncryptedImport.includes("SigurnaLozinka123!"), false);
-    await page.check('input[name="importMode"][value="append"]');
+    const countBeforeMerge = hearings.length;
+    const mergeExisting = hearings[0];
+    const mergeNew = buildStoredHearing("restore-merge-new", tomorrow, "Restore Novi", "Test Osoba");
+    const mergeSkipPath = path.join(os.tmpdir(), `rocisnik-merge-skip-${Date.now()}.json`);
+    await fs.writeFile(mergeSkipPath, JSON.stringify({
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      hearings: [mergeExisting, mergeNew]
+    }), "utf8");
+    await page.setInputFiles("#importEncryptedFile", mergeSkipPath);
+    await page.waitForSelector("#restorePreview:not([hidden])");
+    await assertVisibleText(page, "#restorePreview", "Pregled backupa");
+    await page.check('input[name="importMode"][value="append-skip"]');
+    await page.click("#restoreApplyButton");
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Presko"));
+    hearings = await getHearings(page);
+    assert.equal(hearings.length, countBeforeMerge + 1);
+    assert.ok(hearings.some((hearing) => hearing.id === "restore-merge-new"));
+
+    const countBeforeNewIds = hearings.length;
+    const newIdsPath = path.join(os.tmpdir(), `rocisnik-merge-new-ids-${Date.now()}.json`);
+    await fs.writeFile(newIdsPath, JSON.stringify({
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      hearings: [hearings[0]]
+    }), "utf8");
+    await page.setInputFiles("#importEncryptedFile", newIdsPath);
+    await page.waitForSelector("#restorePreview:not([hidden])");
+    await page.check('input[name="importMode"][value="append-new-ids"]');
+    await page.click("#restoreApplyButton");
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Promijenjeno ID-jeva"));
+    hearings = await getHearings(page);
+    assert.equal(hearings.length, countBeforeNewIds + 1);
+    assert.equal(new Set(hearings.map((hearing) => hearing.id)).size, hearings.length);
+
+    const invalidBackupPath = path.join(os.tmpdir(), `rocisnik-invalid-${Date.now()}.json`);
+    await fs.writeFile(invalidBackupPath, "{nije-json", "utf8");
+    const beforeInvalidRestore = await getHearings(page);
+    await page.setInputFiles("#importEncryptedFile", invalidBackupPath);
+    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Datoteka nije valjan JSON."));
+    await assertVisibleText(page, "#backupMessage", "Datoteka nije valjan JSON.");
+    assert.deepEqual(await getHearings(page), beforeInvalidRestore);
 
     const autoLockPage = await context.newPage();
     await autoLockPage.goto(`${app.url}&qaAutoLockMs=300`, { waitUntil: "domcontentloaded" });

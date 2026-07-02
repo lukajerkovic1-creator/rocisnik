@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=89">
+    <link rel="stylesheet" href="styles.css?v=90">
   </head>
   <body>
     <main class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
@@ -642,6 +642,27 @@
               <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
               <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
             </div>
+            <section class="restore-preview" id="restorePreview" aria-labelledby="restorePreviewTitle" hidden>
+              <div class="restore-preview-header">
+                <div>
+                  <h3 id="restorePreviewTitle">Pregled backupa</h3>
+                  <p id="restorePreviewSummary">Odaberite backup datoteku za pregled.</p>
+                </div>
+                <span class="restore-badge" id="restorePreviewReadable">Nije učitano</span>
+              </div>
+              <dl class="restore-stats" id="restoreStats"></dl>
+              <div class="restore-warnings" id="restoreWarnings" hidden></div>
+              <p class="restore-plan" id="restorePlan"></p>
+              <div class="restore-actions">
+                <button class="secondary-button compact-button" type="button" id="restoreTestButton">Testiraj backup bez uvoza</button>
+                <button class="ghost-button compact-button" type="button" id="restoreClearButton">Očisti pregled</button>
+              </div>
+              <label class="restore-confirm" id="restoreReplaceConfirmWrap" hidden>
+                <span>Za zamjenu svih podataka upišite ZAMIJENI</span>
+                <input id="restoreReplaceConfirm" type="text" autocomplete="off">
+              </label>
+              <button class="danger-button compact-button" type="button" id="restoreApplyButton">Obnovi podatke</button>
+            </section>
             <p class="backup-note">Lozinku nije moguće vratiti ako je zaboravite. Bez lozinke nije moguće otvoriti šifrirani backup.</p>
             <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
           </div>
@@ -739,6 +760,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=89"></script>
+    <script src="app.js?v=90"></script>
   </body>
 </html>

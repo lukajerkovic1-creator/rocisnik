@@ -143,6 +143,7 @@
     scheduleToolsOpen: false,
     encryptedBackupAction: "",
     pendingEncryptedImportFile: null,
+    pendingRestore: null,
     pendingJsonExport: null,
     visibleStart: null,
     visibleEnd: null,
@@ -246,6 +247,17 @@
     importJsonFile: document.getElementById("importJsonFile"),
     importEncryptedFile: document.getElementById("importEncryptedFile"),
     importModeInputs: Array.from(document.querySelectorAll('input[name="importMode"]')),
+    restorePreview: document.getElementById("restorePreview"),
+    restorePreviewSummary: document.getElementById("restorePreviewSummary"),
+    restorePreviewReadable: document.getElementById("restorePreviewReadable"),
+    restoreStats: document.getElementById("restoreStats"),
+    restoreWarnings: document.getElementById("restoreWarnings"),
+    restorePlan: document.getElementById("restorePlan"),
+    restoreTestButton: document.getElementById("restoreTestButton"),
+    restoreClearButton: document.getElementById("restoreClearButton"),
+    restoreApplyButton: document.getElementById("restoreApplyButton"),
+    restoreReplaceConfirmWrap: document.getElementById("restoreReplaceConfirmWrap"),
+    restoreReplaceConfirm: document.getElementById("restoreReplaceConfirm"),
     lastJsonExportAt: document.getElementById("lastJsonExportAt"),
     lastJsonImportAt: document.getElementById("lastJsonImportAt"),
     backupMessage: document.getElementById("backupMessage"),
@@ -455,6 +467,12 @@
     els.encryptedBackupCancelButton.addEventListener("click", closeEncryptedBackupModal);
     els.encryptedBackupCloseButton.addEventListener("click", closeEncryptedBackupModal);
     els.showEncryptedPassword.addEventListener("change", toggleEncryptedPasswordVisibility);
+    els.restoreTestButton.addEventListener("click", testPendingRestore);
+    els.restoreClearButton.addEventListener("click", clearRestorePreview);
+    els.restoreApplyButton.addEventListener("click", applyPendingRestore);
+    document.addEventListener("change", (event) => {
+      if (event.target?.name === "importMode") updateRestorePlan();
+    });
     els.encryptedBackupModal.addEventListener("click", (event) => {
       if (event.target === els.encryptedBackupModal) closeEncryptedBackupModal();
     });
@@ -530,6 +548,7 @@
     });
 
     initializeFocusPanels();
+    initializeRestoreUi();
     setDefaultDateTime();
     setDefaultReminderForm();
     syncDataNotice();
@@ -940,6 +959,29 @@
     els.dataNotice.classList.toggle("storage-note-dismissed", dismissed);
   }
 
+  function initializeRestoreUi() {
+    if (els.importEncryptedButton) els.importEncryptedButton.textContent = "Pregledaj backup";
+    const modePanel = document.querySelector(".backup-import-mode");
+    if (modePanel && els.restorePreview && modePanel.parentElement !== els.restorePreview) {
+      els.restorePreview.insertBefore(modePanel, els.restoreReplaceConfirmWrap);
+    }
+    const legend = modePanel?.querySelector("legend");
+    if (legend) legend.textContent = "Način obnove";
+    const labels = Array.from(modePanel?.querySelectorAll("label") || []);
+    const appendInput = modePanel?.querySelector('input[value="append"]');
+    if (appendInput) appendInput.value = "append-skip";
+    if (labels[0]) labels[0].querySelector("span").textContent = "Spoji i preskoči iste ID-jeve";
+    if (labels[1]) labels[1].querySelector("span").textContent = "Zamijeni sve postojeće podatke";
+    if (modePanel && !modePanel.querySelector('input[value="append-new-ids"]')) {
+      const label = document.createElement("label");
+      label.innerHTML = '<input type="radio" name="importMode" value="append-new-ids"><span>Spoji i generiraj nove ID-jeve za konflikte</span>';
+      const replaceLabel = modePanel.querySelector('input[value="replace"]')?.closest("label");
+      modePanel.insertBefore(label, replaceLabel || null);
+    }
+    const defaultMode = modePanel?.querySelector('input[value="append-skip"]');
+    if (defaultMode) defaultMode.checked = true;
+  }
+
   function initializeFocusPanels() {
     document.querySelectorAll(FOCUS_PANEL_SELECTOR).forEach((panel) => {
       panel.classList.add("focus-panel");
@@ -1129,6 +1171,11 @@
       : "Unesite lozinku za otvaranje šifriranog backup-a.";
     els.encryptedPasswordConfirmWrap.hidden = !isExport;
     els.encryptedBackupConfirmButton.textContent = isExport ? "Izvezi šifrirani backup" : "Uvezi šifrirani backup";
+    if (!isExport) {
+      els.encryptedBackupTitle.textContent = "Pregled šifriranog backup-a";
+      els.encryptedBackupDescription.textContent = "Unesite lozinku za pregled šifriranog backup-a. Podaci se neće obnoviti dok ne potvrdite restore.";
+      els.encryptedBackupConfirmButton.textContent = "Prikaži pregled";
+    }
     els.encryptedBackupModal.hidden = false;
     document.body.classList.add("modal-open");
     setActivePanel(els.encryptedBackupModal.querySelector(".modal-panel"));
@@ -1194,6 +1241,9 @@
   async function handleEncryptedImportFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = "";
+    await previewBackupFile(file);
+    return;
 
     if (!isWebCryptoAvailable()) {
       showBackupMessage("Uvoz šifriranog backup-a nije dostupan u ovom pregledniku jer Web Crypto API nije podržan.", "error");
@@ -1220,6 +1270,10 @@
 
       const parsed = JSON.parse(await file.text());
       const decryptedPayload = await decryptBackupPayload(parsed, password);
+      prepareRestorePreview(decryptedPayload, { encrypted: true, fileName: file.name });
+      closeEncryptedBackupModal();
+      showBackupMessage("Backup je dešifriran i spreman za pregled.");
+      return;
       const validation = validateBackupPayload(decryptedPayload);
       if (!validation.valid) {
         showEncryptedBackupMessage(validation.message, "error");
@@ -1243,6 +1297,8 @@
     try {
       const raw = await file.text();
       const parsed = JSON.parse(raw);
+      prepareRestorePreview(parsed, { encrypted: false, fileName: file.name });
+      return;
       const validation = validateBackupPayload(parsed);
 
       if (!validation.valid) {
@@ -1257,6 +1313,184 @@
       }
     } catch (error) {
       showBackupMessage("Datoteka nije ispravan JSON backup Ročišnika.", "error");
+    }
+  }
+
+  async function previewBackupFile(file) {
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (isEncryptedBackupEnvelope(parsed)) {
+        if (!isWebCryptoAvailable()) {
+          showBackupMessage("Šifrirani backup nije dostupan u ovom pregledniku.", "error");
+          return;
+        }
+        state.pendingEncryptedImportFile = file;
+        openEncryptedBackupModal("import");
+        return;
+      }
+      prepareRestorePreview(parsed, { encrypted: false, fileName: file.name });
+    } catch (error) {
+      clearRestorePreview();
+      showBackupMessage("Datoteka nije valjan JSON.", "error");
+    }
+  }
+
+  function isEncryptedBackupEnvelope(payload) {
+    return Boolean(payload && typeof payload === "object" && !Array.isArray(payload) && payload.algorithm?.name === "AES-GCM" && payload.ciphertext);
+  }
+
+  function prepareRestorePreview(payload, options = {}) {
+    const validation = validateBackupPayload(payload);
+    state.pendingRestore = {
+      fileName: options.fileName || "backup.json",
+      encrypted: Boolean(options.encrypted),
+      payload,
+      validation,
+      tested: false
+    };
+    renderRestorePreview();
+    showBackupMessage(validation.valid ? "Backup je učitan. Pregledajte sažetak prije obnove." : "Backup je učitan, ali nije spreman za obnovu.", validation.valid ? "success" : "error");
+  }
+
+  function renderRestorePreview() {
+    const pending = state.pendingRestore;
+    if (!pending) {
+      els.restorePreview.hidden = true;
+      return;
+    }
+
+    const { validation } = pending;
+    els.restorePreview.hidden = false;
+    els.restorePreviewReadable.textContent = validation.valid ? "Čitljiv" : "Problem";
+    els.restorePreviewReadable.classList.toggle("error", !validation.valid);
+    els.restorePreviewSummary.textContent = `${pending.encrypted ? "Šifrirani" : "JSON"} backup: ${pending.fileName}`;
+    els.restoreStats.replaceChildren(...createRestoreStatNodes(validation, pending));
+    renderRestoreWarnings(validation);
+    updateRestorePlan();
+    els.restoreTestButton.disabled = !validation.valid;
+    els.restoreApplyButton.disabled = !validation.valid;
+  }
+
+  function createRestoreStatNodes(validation, pending) {
+    const stats = validation.stats || createEmptyRestoreStats();
+    const items = [
+      ["Čitljiv", validation.valid ? "Da" : "Ne"],
+      ["Šifriran", pending.encrypted ? "Da" : "Ne"],
+      ["Verzija", validation.formatVersion || "legacy"],
+      ["Datum backupa", validation.exportedAt ? formatLocalDateTime(new Date(validation.exportedAt)) : "nije navedeno"],
+      ["Ukupno ročišta", stats.totalHearings],
+      ["Buduća ročišta", stats.futureHearings],
+      ["Prošla ročišta", stats.pastHearings],
+      ["Najraniji datum", stats.earliestDate ? formatShortDate(new Date(stats.earliestDate)) : "nema"],
+      ["Najkasniji datum", stats.latestDate ? formatShortDate(new Date(stats.latestDate)) : "nema"],
+      ["Nedostajuća polja", stats.missingRequiredFields],
+      ["Mogući duplikati", stats.duplicateCandidates]
+    ];
+    return items.flatMap(([label, value]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = String(value);
+      return [dt, dd];
+    });
+  }
+
+  function renderRestoreWarnings(validation) {
+    const messages = [...(validation.errors || []), ...(validation.warnings || [])];
+    els.restoreWarnings.hidden = messages.length === 0;
+    els.restoreWarnings.replaceChildren();
+    if (!messages.length) return;
+    const list = document.createElement("ul");
+    messages.slice(0, 8).forEach((message) => {
+      const item = document.createElement("li");
+      item.textContent = message;
+      list.append(item);
+    });
+    els.restoreWarnings.append(list);
+  }
+
+  function updateRestorePlan() {
+    const pending = state.pendingRestore;
+    const mode = getImportMode();
+    els.restoreReplaceConfirmWrap.hidden = mode !== "replace";
+    if (!pending?.validation?.valid) {
+      els.restorePlan.textContent = "Restore nije dostupan dok backup ne prođe validaciju.";
+      return;
+    }
+    const simulation = simulateRestore(pending.validation.hearings, mode);
+    els.restorePlan.textContent = simulation.plan;
+  }
+
+  function testPendingRestore() {
+    const pending = state.pendingRestore;
+    if (!pending?.validation?.valid) {
+      showBackupMessage("Backup nije spreman za test restore.", "error");
+      return;
+    }
+    const before = JSON.stringify(state.hearings);
+    const simulation = simulateRestore(pending.validation.hearings, getImportMode());
+    const after = JSON.stringify(state.hearings);
+    if (before !== after) {
+      showBackupMessage("Test restore nije prošao; postojeći podaci nisu promijenjeni.", "error");
+      return;
+    }
+    pending.tested = true;
+    showBackupMessage(`Backup je čitljiv i može se obnoviti. ${simulation.plan}`);
+  }
+
+  function clearRestorePreview() {
+    state.pendingRestore = null;
+    els.restorePreview.hidden = true;
+    els.restoreStats.replaceChildren();
+    els.restoreWarnings.replaceChildren();
+    els.restoreWarnings.hidden = true;
+    els.restorePlan.textContent = "";
+    els.restoreReplaceConfirm.value = "";
+    showBackupMessage("");
+  }
+
+  async function applyPendingRestore() {
+    const pending = state.pendingRestore;
+    if (!pending?.validation?.valid) {
+      showBackupMessage("Nema valjanog backupa za obnovu.", "error");
+      return;
+    }
+    const mode = getImportMode();
+    if (mode === "replace" && els.restoreReplaceConfirm.value.trim() !== "ZAMIJENI") {
+      showBackupMessage("Za zamjenu svih podataka upišite ZAMIJENI.", "error");
+      return;
+    }
+    const prepared = simulateRestore(pending.validation.hearings, mode);
+    const confirmed = window.confirm(`${prepared.plan} Nastaviti?`);
+    if (!confirmed) {
+      showBackupMessage("Restore nije izvršen; postojeći podaci nisu promijenjeni.");
+      return;
+    }
+
+    const previousHearings = state.hearings;
+    const previousSelectedId = state.selectedId;
+    const previousEditingId = state.editingId;
+    try {
+      const nextHearings = normalizeStoredHearings(prepared.nextHearings);
+      state.hearings = nextHearings;
+      state.selectedId = null;
+      state.editingId = null;
+      await saveHearings();
+      setLastJsonImportAt(new Date());
+      renderBackupMetadata();
+      resetForm();
+      focusImportedRange(prepared.visibleHearings);
+      render();
+      checkDueReminders();
+      const message = prepared.message;
+      clearRestorePreview();
+      showBackupMessage(message);
+    } catch (error) {
+      state.hearings = previousHearings;
+      state.selectedId = previousSelectedId;
+      state.editingId = previousEditingId;
+      render();
+      showBackupMessage("Restore nije izvršen; postojeći podaci nisu promijenjeni.", "error");
     }
   }
 
@@ -1611,28 +1845,126 @@
   }
 
   function validateBackupPayload(payload) {
+    const errors = [];
+    const warnings = [];
+    const stats = createEmptyRestoreStats();
+    const resultBase = {
+      valid: false,
+      normalizedData: null,
+      hearings: [],
+      errors,
+      warnings,
+      stats,
+      formatVersion: payload?.formatVersion || null,
+      exportedAt: getOptionalImportString(payload?.exportedAt),
+      message: ""
+    };
+
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-      return { valid: false, message: "Datoteka nije ispravan JSON backup Ročišnika." };
+      errors.push("Datoteka nije ispravan JSON backup Ročišnika.");
+      return finishBackupValidation(resultBase);
     }
 
-    if (payload.formatVersion !== BACKUP_FORMAT_VERSION) {
-      return { valid: false, message: "Backup ima nepodržanu verziju formata." };
+    if (payload.formatVersion == null) {
+      warnings.push("Backup koristi stariji format bez oznake verzije.");
+    } else if (payload.formatVersion !== BACKUP_FORMAT_VERSION) {
+      errors.push("Backup koristi nepodržani format.");
     }
 
     if (!Array.isArray(payload.hearings)) {
-      return { valid: false, message: "Backup ne sadrži ispravnu listu ročišta." };
+      errors.push("Backup ne sadrži listu ročišta.");
+      return finishBackupValidation(resultBase);
     }
 
+    stats.totalHearings = payload.hearings.length;
+    if (stats.totalHearings === 0) warnings.push("Backup je čitljiv, ali ne sadrži ročišta.");
     const hearings = [];
+    const ids = new Set();
+    const duplicateIds = new Set();
+    const comboKeys = new Set();
+    const duplicateCombos = new Set();
+    const knownFields = new Set([
+      "id", "plaintiff", "defendant", "caseNumber", "hearingDateTime", "status", "reminders",
+      "reminderDismissedAt", "reminderSnoozedUntil", "reminderDisabled", "reminderEvents",
+      "disputeSubject", "disputeValue", "specificity", "deletedAt", "deletedReason",
+      "createdAt", "updatedAt", "history"
+    ]);
+
     for (let index = 0; index < payload.hearings.length; index += 1) {
-      const normalized = normalizeImportedHearing(payload.hearings[index]);
+      const item = payload.hearings[index];
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        stats.missingRequiredFields += 1;
+        errors.push(`Zapis ${index + 1} nije ispravan objekt.`);
+        continue;
+      }
+      const unknownFields = Object.keys(item).filter((key) => !knownFields.has(key));
+      if (unknownFields.length) warnings.push(`Zapis ${index + 1} sadrži nepoznata polja: ${unknownFields.slice(0, 4).join(", ")}.`);
+
+      const missing = getMissingRequiredImportFields(item);
+      if (missing.length) {
+        stats.missingRequiredFields += 1;
+        errors.push(`Zapis ${index + 1} nema obavezna polja: ${missing.join(", ")}.`);
+        continue;
+      }
+
+      const normalized = normalizeImportedHearing(item);
       if (!normalized) {
-        return { valid: false, message: `Ročište pod rednim brojem ${index + 1} nije ispravno.` };
+        stats.missingRequiredFields += 1;
+        errors.push(`Zapis ${index + 1} nije moguće normalizirati.`);
+        continue;
       }
       hearings.push(normalized);
+
+      if (ids.has(normalized.id)) duplicateIds.add(normalized.id);
+      ids.add(normalized.id);
+      const comboKey = `${normalizeSearch(normalized.caseNumber)}|${normalized.hearingDateTime}`;
+      if (comboKeys.has(comboKey)) duplicateCombos.add(comboKey);
+      comboKeys.add(comboKey);
+
+      const hearingDate = new Date(normalized.hearingDateTime);
+      if (hearingDate >= new Date()) stats.futureHearings += 1;
+      else stats.pastHearings += 1;
+      const iso = hearingDate.toISOString();
+      if (!stats.earliestDate || iso < stats.earliestDate) stats.earliestDate = iso;
+      if (!stats.latestDate || iso > stats.latestDate) stats.latestDate = iso;
     }
 
-    return { valid: true, hearings };
+    stats.duplicateCandidates = duplicateIds.size + duplicateCombos.size;
+    if (stats.duplicateCandidates) warnings.push(`Pronađeno je ${stats.duplicateCandidates} mogućih duplikata u backupu.`);
+    resultBase.hearings = hearings;
+    resultBase.normalizedData = { hearings };
+    return finishBackupValidation(resultBase);
+  }
+
+  function createEmptyRestoreStats() {
+    return {
+      totalHearings: 0,
+      futureHearings: 0,
+      pastHearings: 0,
+      missingRequiredFields: 0,
+      duplicateCandidates: 0,
+      earliestDate: null,
+      latestDate: null
+    };
+  }
+
+  function finishBackupValidation(result) {
+    result.valid = result.errors.length === 0 && Array.isArray(result.hearings);
+    result.message = result.valid
+      ? "Backup je čitljiv i može se pregledati."
+      : (result.errors[0] || "Backup nije spreman za obnovu.");
+    return result;
+  }
+
+  function getMissingRequiredImportFields(item) {
+    const missing = [];
+    if (!getRequiredImportString(item.id)) missing.push("ID");
+    if (!getRequiredImportString(item.plaintiff)) missing.push("tužitelj");
+    if (!getRequiredImportString(item.defendant)) missing.push("tuženik");
+    if (!getRequiredImportString(item.caseNumber)) missing.push("broj predmeta");
+    const hearingDateTime = getRequiredImportString(item.hearingDateTime);
+    if (!hearingDateTime || Number.isNaN(new Date(hearingDateTime).getTime())) missing.push("datum i sat ročišta");
+    return missing;
   }
 
   function normalizeImportedHearing(item) {
@@ -1684,7 +2016,77 @@
   }
 
   function getImportMode() {
-    return els.importModeInputs.find((input) => input.checked)?.value === "replace" ? "replace" : "append";
+    const value = document.querySelector('input[name="importMode"]:checked')?.value || "append-skip";
+    if (value === "replace") return "replace";
+    if (value === "append-new-ids") return "append-new-ids";
+    return "append-skip";
+  }
+
+  function simulateRestore(importedHearings, mode) {
+    const incoming = normalizeStoredHearings(importedHearings);
+    if (mode === "replace") {
+      return {
+        nextHearings: incoming,
+        visibleHearings: incoming,
+        plan: `Zamijenit će se ${formatHearingCount(state.hearings.length)} s ${formatHearingCount(incoming.length)} iz backupa.`,
+        message: `Restore je dovršen. Zamijenjeno je ${formatHearingCount(incoming.length)}.`,
+        added: incoming.length,
+        skipped: 0,
+        changedIds: 0
+      };
+    }
+
+    const existingIds = new Set(state.hearings.map((hearing) => hearing.id));
+    const nextHearings = [...state.hearings];
+    const visibleHearings = [];
+    let skipped = 0;
+    let changedIds = 0;
+
+    incoming.forEach((hearing) => {
+      if (existingIds.has(hearing.id)) {
+        if (mode === "append-new-ids") {
+          const nextId = createId();
+          existingIds.add(nextId);
+          changedIds += 1;
+          const now = new Date().toISOString();
+          const restored = {
+            ...hearing,
+            id: nextId,
+            updatedAt: now,
+            history: [
+              ...normalizeHistory(hearing.history, hearing),
+              createHistoryEvent("imported", hearing, { ...hearing, id: nextId }, {
+                timestamp: now,
+                changedFields: ["id"],
+                note: `ID je promijenjen pri restoreu jer je ${hearing.id} već postojao.`
+              })
+            ]
+          };
+          nextHearings.push(restored);
+          visibleHearings.push(restored);
+          return;
+        }
+        skipped += 1;
+        return;
+      }
+      existingIds.add(hearing.id);
+      nextHearings.push(hearing);
+      visibleHearings.push(hearing);
+    });
+
+    return {
+      nextHearings,
+      visibleHearings,
+      plan: mode === "append-new-ids"
+        ? `Dodat će se ${formatHearingCount(visibleHearings.length)}. Promijenit će se ${changedIds} konfliktnih ID-jeva.`
+        : `Dodat će se ${formatHearingCount(visibleHearings.length)}. Preskočit će se ${skipped} zapisa s istim ID-em.`,
+      message: mode === "append-new-ids"
+        ? `Restore je dovršen. Dodano: ${formatHearingCount(visibleHearings.length)}. Promijenjeno ID-jeva: ${changedIds}.`
+        : `Restore je dovršen. Dodano: ${formatHearingCount(visibleHearings.length)}. Preskočeno istih ID-jeva: ${skipped}.`,
+      added: visibleHearings.length,
+      skipped,
+      changedIds
+    };
   }
 
   function importHearings(importedHearings, mode) {

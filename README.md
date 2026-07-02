@@ -45,6 +45,21 @@ Lokalna baza i backup datoteka nisu isto:
 - Lozinka backup datoteke nije automatski ista kao lokalna lozinka aplikacije, osim ako korisnik sam odabere istu lozinku.
 - Backup treba redovito izvoziti jer brisanje podataka preglednika, kvar uređaja ili promjena uređaja mogu dovesti do gubitka lokalnih unosa.
 
+## Restore I Test Backupa
+
+Obnova podataka ide kroz siguran pregled prije stvarnog restorea.
+
+- Gumb **Pregledaj backup** učitava JSON ili šifrirani backup i prikazuje sažetak prije obnove.
+- Preview prikazuje je li backup čitljiv, je li šifriran, broj ročišta, buduće/prošle zapise, raspon datuma, nedostajuća polja i upozorenja.
+- Gumb **Testiraj backup bez uvoza** provjerava da se backup može pročitati i normalizirati, ali ne mijenja postojeće podatke.
+- Restore se izvršava tek nakon odabira načina obnove i dodatne potvrde.
+- **Zamijeni sve postojeće podatke** briše trenutni radni skup i učitava podatke iz backupa; za ovu opciju treba upisati `ZAMIJENI`.
+- **Spoji i preskoči iste ID-jeve** dodaje samo zapise čiji ID ne postoji u trenutnoj bazi.
+- **Spoji i generiraj nove ID-jeve za konflikte** dodaje i konfliktne zapise, ali im dodjeljuje novi ID.
+- Ako restore ne uspije, postojeća baza ostaje netaknuta.
+
+Preporuka: povremeno testirajte backup bez uvoza kako biste provjerili da je datoteka čitljiva prije nego vam zatreba stvarna obnova.
+
 Ova zaštita ne štiti od kompromitiranog uređaja, malwarea, zlonamjernih browser ekstenzija ili osobe koja ima pristup već otključanom uređaju.
 
 ## Napomena
