@@ -379,13 +379,8 @@
       if (event.target === els.onboardingModal) dismissOnboarding();
     });
     els.cancelEditButton.addEventListener("click", resetForm);
-    els.clearSelectionButton.addEventListener("click", () => {
-      state.selectedId = null;
-      resetForm();
-      setMobileView("details");
-      render();
-    });
-    els.quickAddButton.addEventListener("click", goToNewHearing);
+    els.clearSelectionButton.addEventListener("click", goToNewHearingForm);
+    els.quickAddButton.addEventListener("click", goToNewHearingForm);
     els.editButton.addEventListener("click", startEditSelected);
     els.deleteButton.addEventListener("click", deleteSelected);
     els.restoreButton.addEventListener("click", restoreSelected);
@@ -430,7 +425,13 @@
     });
     els.clearFiltersButton.addEventListener("click", clearFilters);
     els.mobileTabs.forEach((tab) => {
-      tab.addEventListener("click", () => setMobileView(tab.dataset.mobileView));
+      tab.addEventListener("click", () => {
+        if (tab.dataset.mobileView === "form") {
+          goToNewHearingForm();
+          return;
+        }
+        setMobileView(tab.dataset.mobileView);
+      });
     });
     els.utilityButtons.forEach((button) => {
       button.addEventListener("click", () => openUtilityView(button.dataset.utilityView));
@@ -1313,8 +1314,7 @@
 
   function openUtilityView(view) {
     if (view === "form") {
-      state.currentUtilityView = "form";
-      goToNewHearing();
+      goToNewHearingForm();
       return;
     }
     if (view === "reminders") {
@@ -1955,7 +1955,7 @@
 
     const actions = document.createElement("div");
     actions.className = "empty-actions";
-    actions.append(createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearing }));
+    actions.append(createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearingForm }));
     empty.append(actions);
     return empty;
   }
@@ -2071,7 +2071,7 @@
       return {
         title: "Još nema unesenih ročišta.",
         text: "Dodajte prvo ročište kako biste počeli voditi osobni raspored.",
-        actions: [{ label: "Dodaj prvo ročište", variant: "primary", action: goToNewHearing }]
+        actions: [{ label: "Dodaj prvo ročište", variant: "primary", action: goToNewHearingForm }]
       };
     }
 
@@ -2086,7 +2086,7 @@
     return {
       title: viewConfig.emptyTitle,
       text: viewConfig.emptyText,
-      actions: [{ label: "Dodaj novo ročište", variant: "secondary", action: goToNewHearing }]
+      actions: [{ label: "Dodaj novo ročište", variant: "secondary", action: goToNewHearingForm }]
     };
   }
 
@@ -2111,12 +2111,53 @@
     return button;
   }
 
-  function goToNewHearing() {
+  function goToNewHearingForm() {
+    state.selectedId = null;
     state.currentUtilityView = "form";
     resetForm();
     setMobileView("form");
     render();
-    els.fields.plaintiff.focus();
+    scrollAndFocusNewHearingForm();
+  }
+
+  function scrollAndFocusNewHearingForm() {
+    const formPanel = els.entryPanel || els.form;
+    const target = els.formTitle || formPanel;
+    const focusTarget = getNewHearingFocusTarget();
+
+    requestAnimationFrame(() => {
+      scrollToFormTarget(target || formPanel);
+      requestAnimationFrame(() => {
+        if (focusTarget && typeof focusTarget.focus === "function") {
+          focusTarget.focus({ preventScroll: true });
+        }
+      });
+    });
+  }
+
+  function scrollToFormTarget(target) {
+    if (!target || typeof target.getBoundingClientRect !== "function") return;
+    const top = target.getBoundingClientRect().top + window.scrollY - getFormScrollOffset();
+    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+  }
+
+  function getFormScrollOffset() {
+    const mobileTabs = document.querySelector(".mobile-tabs");
+    const mobileTabsHeight = mobileTabs && window.matchMedia("(max-width: 760px)").matches
+      ? mobileTabs.getBoundingClientRect().height
+      : 0;
+    return mobileTabsHeight + 12;
+  }
+
+  function getNewHearingFocusTarget() {
+    if (isFocusableInput(els.fields.caseNumber)) return els.fields.caseNumber;
+    const required = els.form?.querySelector("input[required], select[required], textarea[required]");
+    if (isFocusableInput(required)) return required;
+    return els.form?.querySelector("input:not([type='hidden']), select, textarea, button") || null;
+  }
+
+  function isFocusableInput(element) {
+    return Boolean(element && !element.disabled && element.offsetParent !== null);
   }
 
   function showDeletedRecords() {
@@ -2275,7 +2316,7 @@
     actions.className = "empty-actions";
     actions.append(
       createEmptyActionButton({ label: "Očisti filtre", variant: "secondary", action: clearFilters }),
-      createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearing })
+      createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearingForm })
     );
     empty.append(actions);
     return empty;
@@ -2433,8 +2474,8 @@
 
   function updateFormMode() {
     const isEditing = Boolean(state.editingId);
-    els.formTitle.textContent = isEditing ? "Uredi ročište" : "Dodaj ročište";
-    els.submitButton.textContent = isEditing ? "Spremi izmjene" : "Dodaj ročište";
+    els.formTitle.textContent = isEditing ? "Uredi ročište" : "Novo ročište";
+    els.submitButton.textContent = isEditing ? "Spremi izmjene" : "Spremi ročište";
     els.cancelEditButton.hidden = !isEditing;
   }
 

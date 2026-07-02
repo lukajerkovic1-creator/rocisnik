@@ -319,7 +319,7 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
 
     await page.click(".schedule-empty button");
-    await assertVisibleText(page, "#formTitle", "Dodaj ročište");
+    await assertNewHearingFormReady(page);
     await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
 
     assert.equal(await page.locator(".reminders-panel").isVisible(), false);
@@ -374,7 +374,7 @@ async function run() {
       return height >= 50 && height <= 64;
     }), true);
     await page.click("#quickAddButton");
-    assert.equal(await page.locator("#plaintiff").evaluate((input) => document.activeElement === input), true);
+    await assertNewHearingFormReady(page);
 
     let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
     assert.equal(hearings.length, 1);
@@ -673,6 +673,15 @@ async function run() {
     await assertVisibleText(page, "#detailsHistory", "Zapis stvoren");
 
     await page.click("#editButton");
+    assert.equal(await page.locator("#plaintiff").inputValue(), "Croatia osiguranje");
+    await page.click("#clearSelectionButton");
+    await assertNewHearingFormReady(page);
+    assert.equal(await page.locator("#plaintiff").inputValue(), "");
+    assert.equal(await page.locator("#caseNumber").inputValue(), "");
+    assert.equal(await page.locator("#cancelEditButton").isHidden(), true);
+    await page.click('.entry-panel [data-utility-view="search"]');
+    await page.locator(".search-result-button", { hasText: "Croatia osiguranje" }).click();
+    await page.click("#editButton");
     await page.selectOption("#hearingStatus", "otkazano");
     await page.click("#submitButton");
     hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
@@ -952,6 +961,26 @@ async function assertVisibleText(page, selector, expectedText) {
   await assert.equal(await locator.isVisible(), true, `${selector} should be visible`);
   const text = await locator.innerText();
   assert.ok(text.includes(expectedText), `${selector} should contain "${expectedText}", got "${text}"`);
+}
+
+async function assertNewHearingFormReady(page) {
+  await assertVisibleText(page, "#formTitle", "Novo ročište");
+  await assertVisibleText(page, "#submitButton", "Spremi ročište");
+  assert.equal(await page.locator("#hearingId").inputValue(), "");
+  assert.equal(await page.locator("#caseNumber").isVisible(), true);
+  await page.waitForFunction(() => document.activeElement?.id === "caseNumber");
+  const formViewport = await page.evaluate(() => {
+    const title = document.querySelector("#formTitle")?.getBoundingClientRect();
+    const caseNumber = document.querySelector("#caseNumber")?.getBoundingClientRect();
+    return {
+      titleVisible: Boolean(title && title.top >= 0 && title.bottom <= window.innerHeight),
+      fieldVisible: Boolean(caseNumber && caseNumber.top >= 0 && caseNumber.bottom <= window.innerHeight),
+      noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+    };
+  });
+  assert.equal(formViewport.titleVisible, true);
+  assert.equal(formViewport.fieldVisible, true);
+  assert.equal(formViewport.noHorizontalScroll, true);
 }
 
 async function openHistoryPanel(page) {
