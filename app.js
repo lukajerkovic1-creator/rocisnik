@@ -144,6 +144,8 @@
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
+    twoWeekCalendar: document.getElementById("twoWeekCalendar"),
+    twoWeekSummary: document.getElementById("twoWeekSummary"),
     summaryTodayCount: document.getElementById("summaryTodayCount"),
     summaryTodayMeta: document.getElementById("summaryTodayMeta"),
     summaryWeekCount: document.getElementById("summaryWeekCount"),
@@ -438,6 +440,7 @@
     setDefaultReminderForm();
     syncDataNotice();
     updateNotificationStatus();
+    setMobileView(state.currentMobileView);
     render();
     checkDueReminders();
     if (!hasCompletedOnboarding()) openOnboardingModal();
@@ -1820,6 +1823,7 @@
     renderBackupReminder();
     renderReminders();
     updateUtilityTabs();
+    renderTwoWeekCalendar();
     renderCalendar();
     renderSearchResults();
     renderDetails();
@@ -1891,6 +1895,133 @@
       const hearings = visibleHearings.filter((hearing) => isSameDay(new Date(hearing.hearingDateTime), day));
       els.calendarGrid.append(createDayCard(day, hearings));
     });
+  }
+
+  function renderTwoWeekCalendar() {
+    if (!els.twoWeekCalendar) return;
+    els.twoWeekCalendar.replaceChildren();
+
+    const rangeStart = getWeekStart(new Date());
+    const nextWeekStart = addDays(rangeStart, 7);
+    const rangeEnd = endOfDay(addDays(rangeStart, 13));
+    const days = Array.from({ length: 14 }, (_, index) => addDays(rangeStart, index));
+    const hearings = getVisibleHearings()
+      .filter((hearing) => {
+        const date = new Date(hearing.hearingDateTime);
+        return !Number.isNaN(date.getTime()) && date >= rangeStart && date <= rangeEnd;
+      })
+      .sort(compareHearingsByDate);
+    const thisWeekCount = hearings.filter((hearing) => {
+      const date = new Date(hearing.hearingDateTime);
+      return date >= rangeStart && date < nextWeekStart;
+    }).length;
+    const nextWeekCount = hearings.length - thisWeekCount;
+
+    renderTwoWeekSummary(hearings.length, thisWeekCount, nextWeekCount);
+
+    if (hearings.length === 0) {
+      els.twoWeekCalendar.append(createTwoWeekEmptyState());
+      return;
+    }
+
+    days.forEach((day) => {
+      els.twoWeekCalendar.append(createTwoWeekDayCard(day, getTwoWeekHearingsForDate(hearings, day)));
+    });
+  }
+
+  function renderTwoWeekSummary(total, thisWeek, nextWeek) {
+    if (!els.twoWeekSummary) return;
+    els.twoWeekSummary.replaceChildren(
+      createTwoWeekSummaryChip("Ukupno rasprava", total),
+      createTwoWeekSummaryChip("Ovaj tjedan", thisWeek),
+      createTwoWeekSummaryChip("Sljedeći tjedan", nextWeek)
+    );
+  }
+
+  function createTwoWeekSummaryChip(label, count) {
+    const chip = document.createElement("span");
+    chip.className = "two-week-summary-chip";
+    chip.innerHTML = `<small>${escapeHtml(label)}</small><strong>${count}</strong>`;
+    return chip;
+  }
+
+  function createTwoWeekEmptyState() {
+    const empty = document.createElement("div");
+    empty.className = "two-week-empty";
+    empty.append(
+      createEmptyTitle("Nema rasprava ovaj i sljedeći tjedan."),
+      createEmptyText("Dodajte novo ročište ili otvorite širi raspored za druge datume.")
+    );
+
+    const actions = document.createElement("div");
+    actions.className = "empty-actions";
+    actions.append(createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearing }));
+    empty.append(actions);
+    return empty;
+  }
+
+  function createTwoWeekDayCard(day, hearings) {
+    const card = document.createElement("article");
+    card.className = "two-week-day";
+    if (isToday(day)) card.classList.add("today");
+    if (day.getDay() === 0 || day.getDay() === 6) card.classList.add("weekend");
+
+    const header = document.createElement("div");
+    header.className = "two-week-day-head";
+    header.innerHTML = `
+      <span class="two-week-day-name">${escapeHtml(DAY_NAMES[day.getDay()])}</span>
+      <strong>${day.getDate()}. ${escapeHtml(MONTH_NAMES_NOMINATIVE[day.getMonth()])}</strong>
+    `;
+    card.append(header);
+
+    if (hearings.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "two-week-no-hearings";
+      empty.textContent = "Nema rasprava";
+      card.append(empty);
+      return card;
+    }
+
+    const list = document.createElement("div");
+    list.className = "two-week-hearing-list";
+    hearings.slice(0, 4).forEach((hearing) => list.append(createTwoWeekHearingButton(hearing)));
+    card.append(list);
+
+    if (hearings.length > 4) {
+      const more = document.createElement("p");
+      more.className = "two-week-more";
+      more.textContent = `+ još ${hearings.length - 4}`;
+      card.append(more);
+    }
+
+    return card;
+  }
+
+  function createTwoWeekHearingButton(hearing) {
+    const date = new Date(hearing.hearingDateTime);
+    const parties = `${hearing.plaintiff || "Tužitelj"} / ${hearing.defendant || "Tuženik"}`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `two-week-hearing ${getStatusClass(hearing.status)}`;
+    if (hearing.id === state.selectedId) button.classList.add("selected");
+    if (isDeletedHearing(hearing)) button.classList.add("deleted");
+    button.innerHTML = `
+      <span class="two-week-hearing-top">
+        <strong>${escapeHtml(formatTime(date))}</strong>
+        ${createStatusBadgeHtml(hearing.status)}
+      </span>
+      <span class="two-week-hearing-case">${escapeHtml(hearing.caseNumber || "Bez broja predmeta")}</span>
+      <span class="two-week-hearing-parties">${escapeHtml(parties)}</span>
+      ${isDeletedHearing(hearing) ? `<span class="deleted-badge">${escapeHtml(getDeletedLabel(hearing))}</span>` : ""}
+    `;
+    button.addEventListener("click", () => openHearingDetails(hearing.id, "twoWeek"));
+    return button;
+  }
+
+  function getTwoWeekHearingsForDate(hearings, date) {
+    return hearings
+      .filter((hearing) => isSameDay(new Date(hearing.hearingDateTime), date))
+      .sort(compareHearingsByDate);
   }
 
   function createDayCard(day, hearings) {
@@ -2041,9 +2172,7 @@
       </span>
     `;
     button.addEventListener("click", () => {
-      state.selectedId = hearing.id;
-      setMobileView("details");
-      render();
+      openHearingDetails(hearing.id, "schedule");
     });
     return button;
   }
@@ -2071,11 +2200,19 @@
       </span>
     `;
     button.addEventListener("click", () => {
-      state.selectedId = hearing.id;
-      setMobileView("details");
-      render();
+      openHearingDetails(hearing.id, "search");
     });
     return button;
+  }
+
+  function openHearingDetails(hearingId, desktopReturnView = state.currentMobileView) {
+    state.selectedId = hearingId;
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      setMobileView("details");
+    } else {
+      setMobileView(desktopReturnView);
+    }
+    render();
   }
 
   function renderSearchResults() {
@@ -2398,6 +2535,7 @@
 
   function setMobileView(view) {
     state.currentMobileView = view;
+    document.body.dataset.mobileView = view;
     els.mobileTabs.forEach((tab) => {
       const isActive = tab.dataset.mobileView === view;
       tab.classList.toggle("active", isActive);

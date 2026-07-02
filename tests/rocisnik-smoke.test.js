@@ -262,20 +262,20 @@ async function run() {
       const scheduleTabs = document.querySelector(".schedule-view-tabs")?.getBoundingClientRect();
       const scheduleDatebar = document.querySelector(".schedule-datebar")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
-      const footer = document.querySelector(".app-footer")?.getBoundingClientRect();
+      const primaryTabs = document.querySelector(".mobile-tabs")?.getBoundingClientRect();
       const allTab = document.querySelector('.schedule-view-tabs [data-schedule-view="all"]')?.getBoundingClientRect();
       return {
         noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
         scheduleTabsDoNotOverlapDatebar: scheduleTabs && scheduleDatebar ? scheduleTabs.right <= scheduleDatebar.left : false,
         searchActionsInReferenceViewport: searchActions ? searchActions.bottom <= window.innerHeight : false,
-        footerStartsInReferenceViewport: footer ? footer.top < window.innerHeight : false,
+        primaryTabsInReferenceViewport: primaryTabs ? primaryTabs.top < window.innerHeight && primaryTabs.bottom < window.innerHeight : false,
         allTabReadable: allTab ? allTab.width >= 58 : false
       };
     });
     assert.equal(referenceViewportLayout.noHorizontalScroll, true);
     assert.equal(referenceViewportLayout.scheduleTabsDoNotOverlapDatebar, true);
     assert.equal(referenceViewportLayout.searchActionsInReferenceViewport, true);
-    assert.equal(referenceViewportLayout.footerStartsInReferenceViewport, true);
+    assert.equal(referenceViewportLayout.primaryTabsInReferenceViewport, true);
     assert.equal(referenceViewportLayout.allTabReadable, true);
     await page.setViewportSize({ width: 1280, height: 900 });
 
@@ -409,6 +409,8 @@ async function run() {
     const today = startOfDay(new Date());
     const yesterday = addDays(today, -1);
     const tomorrow = addDays(today, 1);
+    const currentWeekStart = getWeekStart(today);
+    const nextWeekDate = addDays(currentWeekStart, 8);
     const tenDaysFromToday = addDays(today, 10);
     const fortyDaysFromToday = addDays(today, 40);
     await page.waitForFunction(() => document.querySelectorAll("#hearingStatus option").length >= 4);
@@ -424,6 +426,19 @@ async function run() {
       buildStoredHearing("date-filter-canceled", tomorrow, "Datum Otkazano", "Test Osoba", "otkazano"),
       buildStoredHearing("date-filter-postponed", tomorrow, "Datum Odgodeno", "Test Osoba", postponedStatusValue),
       {
+        ...buildStoredHearing("two-week-early", today, "Dva Tjedna Rano", "Test Osoba"),
+        hearingDateTime: toDateTimeInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 15))
+      },
+      {
+        ...buildStoredHearing("two-week-middle", today, "Dva Tjedna Sredina", "Test Osoba"),
+        hearingDateTime: toDateTimeInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 30))
+      },
+      {
+        ...buildStoredHearing("two-week-late", today, "Dva Tjedna Kasno", "Test Osoba"),
+        hearingDateTime: toDateTimeInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 45))
+      },
+      buildStoredHearing("two-week-next", nextWeekDate, "Dva Tjedna Sljedeci", "Test Osoba", postponedStatusValue),
+      {
         ...buildStoredHearing("date-filter-deleted", tomorrow, "Datum Obrisano", "Test Osoba"),
         deletedAt: new Date().toISOString()
       }
@@ -433,6 +448,48 @@ async function run() {
       localStorage.setItem(key, JSON.stringify([...existing, ...records]));
     }, { key: STORAGE_KEY, records: seededHearings });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await assertVisibleText(page, ".mobile-tabs", "Ovaj i sljedeći tjedan");
+    const twoWeekTabOrder = await page.evaluate(() => {
+      const twoWeek = document.querySelector('.mobile-tab[data-mobile-view="twoWeek"]')?.getBoundingClientRect();
+      const schedule = document.querySelector('.mobile-tab[data-mobile-view="schedule"]')?.getBoundingClientRect();
+      return Boolean(twoWeek && schedule && twoWeek.left < schedule.left);
+    });
+    assert.equal(twoWeekTabOrder, true);
+    await page.click('.mobile-tab[data-mobile-view="twoWeek"]');
+    await assertVisibleText(page, "#twoWeekTitle", "Ovaj i sljedeći tjedan");
+    await assertVisibleText(page, "#twoWeekSummary", "Ukupno rasprava");
+    await assertVisibleText(page, "#twoWeekCalendar", "Dva Tjedna Sljedeci");
+    await assertVisibleText(page, "#twoWeekCalendar", "ODGOĐENO");
+    await assertVisibleText(page, "#twoWeekCalendar", "Nema rasprava");
+    await assertVisibleText(page, "#twoWeekCalendar", "+ još");
+    await assertVisibleText(page, "#twoWeekCalendar", "08:15");
+    await assertVisibleText(page, "#twoWeekCalendar", "09:30");
+    const twoWeekDesktop = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll(".two-week-day"));
+      const firstBusyCard = cards.find((card) => card.innerText.includes("Dva Tjedna Rano"));
+      const dayTops = [...new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top)))];
+      const times = firstBusyCard
+        ? Array.from(firstBusyCard.querySelectorAll(".two-week-hearing-top strong")).map((node) => node.textContent.trim())
+        : [];
+      return {
+        cardCount: cards.length,
+        rowCount: dayTops.length,
+        todayHighlighted: Boolean(document.querySelector(".two-week-day.today")),
+        noDeletedRecord: !document.querySelector("#twoWeekCalendar")?.innerText.includes("Datum Obrisano"),
+        sortedFirstTimes: times.slice(0, 2).join(","),
+        noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+      };
+    });
+    assert.equal(twoWeekDesktop.cardCount, 14);
+    assert.equal(twoWeekDesktop.rowCount, 2);
+    assert.equal(twoWeekDesktop.todayHighlighted, true);
+    assert.equal(twoWeekDesktop.noDeletedRecord, true);
+    assert.equal(twoWeekDesktop.sortedFirstTimes, "08:15,09:30");
+    assert.equal(twoWeekDesktop.noHorizontalScroll, true);
+    await page.locator(".two-week-hearing", { hasText: "Dva Tjedna Sljedeci" }).click();
+    await assertVisibleText(page, "#detailsParties", "P-two-week-next/2026");
+    assert.equal(await page.locator(".two-week-panel").isVisible(), true);
+    await page.click('.mobile-tab[data-mobile-view="schedule"]');
     await assertScheduleViewActive(page, "today");
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleExcludes(page, "Datum Deset");
@@ -798,10 +855,28 @@ async function run() {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator(".mobile-tabs").isVisible(), true);
-    await page.click('[data-mobile-view="schedule"]');
+    await page.click('.mobile-tab[data-mobile-view="twoWeek"]');
+    assert.equal(await page.locator(".two-week-panel").isVisible(), true);
+    const twoWeekMobileLayout = await page.evaluate(() => {
+      const calendar = document.querySelector(".two-week-calendar");
+      const cards = Array.from(document.querySelectorAll(".two-week-day"));
+      const firstCard = cards[0]?.getBoundingClientRect();
+      const secondCard = cards[1]?.getBoundingClientRect();
+      return {
+        noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+        verticalList: Boolean(firstCard && secondCard && secondCard.top > firstCard.bottom),
+        fullWidthFirstTab: document.querySelector('.mobile-tab[data-mobile-view="twoWeek"]')?.getBoundingClientRect().width > 300,
+        gridColumns: calendar ? getComputedStyle(calendar).gridTemplateColumns.split(" ").filter(Boolean).length : 0
+      };
+    });
+    assert.equal(twoWeekMobileLayout.noHorizontalScroll, true);
+    assert.equal(twoWeekMobileLayout.verticalList, true);
+    assert.equal(twoWeekMobileLayout.fullWidthFirstTab, true);
+    assert.equal(twoWeekMobileLayout.gridColumns, 1);
+    await page.click('.mobile-tab[data-mobile-view="schedule"]');
     assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="today"]').isVisible(), true);
     assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="next30"]').isVisible(), true);
-    await page.click('[data-mobile-view="search"]');
+    await page.click('.mobile-tab[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
     assert.equal(await page.locator("#filterCaseNumber").isVisible(), true);
@@ -832,6 +907,14 @@ function addDays(date, days) {
 function startOfDay(date) {
   const result = new Date(date);
   result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function getWeekStart(date) {
+  const result = startOfDay(date);
+  const day = result.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  result.setDate(result.getDate() + diff);
   return result;
 }
 

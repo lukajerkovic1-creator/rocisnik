@@ -838,6 +838,7 @@ select:focus-visible {
 }
 
 .entry-panel,
+.two-week-panel,
 .schedule-panel,
 .search-panel,
 .details-panel {
@@ -935,6 +936,183 @@ select:focus-visible {
 .schedule-panel {
   grid-area: schedule;
   padding: 10px 12px;
+}
+
+.two-week-panel {
+  grid-area: schedule;
+  padding: 14px;
+}
+
+.two-week-heading {
+  align-items: start;
+  gap: 14px;
+}
+
+.two-week-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+  min-width: 220px;
+}
+
+.two-week-summary-chip {
+  display: inline-grid;
+  gap: 1px;
+  min-width: 94px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 107, 99, 0.16);
+  border-radius: 10px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.two-week-summary-chip small {
+  color: #52625f;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.two-week-summary-chip strong {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.two-week-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.two-week-day {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 178px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.two-week-day.today {
+  border-color: rgba(15, 107, 99, 0.42);
+  box-shadow: 0 0 0 2px rgba(15, 107, 99, 0.08);
+}
+
+.two-week-day.weekend {
+  background: #f8fbfa;
+}
+
+.two-week-day-head {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.two-week-day-name {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.two-week-day-head strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.two-week-hearing-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.two-week-hearing {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 8px;
+  color: var(--text);
+  text-align: left;
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  background: #fbfdfd;
+}
+
+.two-week-hearing:hover,
+.two-week-hearing:focus-visible,
+.two-week-hearing.selected {
+  border-color: rgba(15, 107, 99, 0.34);
+  border-left-color: var(--accent);
+  background: #f4fbfa;
+}
+
+.two-week-hearing.status-postponed {
+  border-left-color: #c77512;
+}
+
+.two-week-hearing.status-canceled {
+  border-left-color: #c73a3a;
+}
+
+.two-week-hearing.status-held {
+  border-left-color: #1b5f99;
+}
+
+.two-week-hearing-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.two-week-hearing-top strong {
+  color: var(--accent-strong);
+  font-size: 13px;
+}
+
+.two-week-hearing-case,
+.two-week-hearing-parties {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.two-week-hearing-case {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.two-week-hearing-parties {
+  color: #52625f;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.two-week-no-hearings,
+.two-week-more {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.two-week-more {
+  padding: 2px 4px;
+  color: var(--accent-strong);
+}
+
+.two-week-empty {
+  grid-column: 1 / -1;
+  min-height: 220px;
 }
 
 .side-column {
@@ -1869,7 +2047,8 @@ select.invalid {
   font-weight: 780;
 }
 
-.schedule-empty {
+.schedule-empty,
+.two-week-empty {
   grid-column: 1 / -1;
   display: grid;
   gap: 10px;
@@ -1881,12 +2060,14 @@ select.invalid {
   background: var(--surface-soft);
 }
 
-.schedule-empty strong {
+.schedule-empty strong,
+.two-week-empty strong {
   color: var(--text);
   font-size: 16px;
 }
 
-.schedule-empty span {
+.schedule-empty span,
+.two-week-empty span {
   font-size: 14px;
 }
 
@@ -2606,11 +2787,11 @@ select.invalid {
 
 .mobile-tabs {
   width: 100%;
-  display: none;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: grid;
+  grid-template-columns: minmax(180px, 1.25fr) repeat(4, minmax(0, 1fr));
   gap: 8px;
   max-width: 1440px;
-  margin: 0 auto 14px;
+  margin: 0 auto 10px;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -2819,7 +3000,7 @@ select.invalid {
     top: 0;
     z-index: 10;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     max-width: 1440px;
     margin: 0 auto 10px;
@@ -2828,6 +3009,10 @@ select.invalid {
     border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(10px);
+  }
+
+  .mobile-tab[data-mobile-view="twoWeek"] {
+    grid-column: 1 / -1;
   }
 
   .mobile-tab {
@@ -2866,6 +3051,7 @@ select.invalid {
   }
 
   .entry-panel,
+  .two-week-panel,
   .schedule-panel,
   .search-panel,
   .details-panel {
@@ -2875,6 +3061,7 @@ select.invalid {
   .entry-panel,
   .search-panel,
   .details-panel,
+  .two-week-panel,
   .schedule-panel,
   .workspace .data-notice {
     padding: 14px;
@@ -2910,6 +3097,34 @@ select.invalid {
   .calendar-grid {
     grid-template-columns: 1fr;
     gap: 9px;
+  }
+
+  .two-week-heading {
+    align-items: stretch;
+  }
+
+  .two-week-summary {
+    justify-content: stretch;
+    min-width: 0;
+  }
+
+  .two-week-summary-chip {
+    flex: 1 1 120px;
+  }
+
+  .two-week-calendar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .two-week-day {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .two-week-hearing {
+    min-height: 64px;
+    padding: 10px;
   }
 
   .jump-controls,
@@ -2992,6 +3207,26 @@ select.invalid {
 @media (min-width: 761px) {
   .mobile-view {
     display: block;
+  }
+
+  .two-week-panel {
+    display: none;
+  }
+
+  body[data-mobile-view="twoWeek"] .workspace {
+    grid-template-areas:
+      "schedule side"
+      "schedule side";
+  }
+
+  body[data-mobile-view="twoWeek"] .two-week-panel {
+    display: block;
+  }
+
+  body[data-mobile-view="twoWeek"] .schedule-panel,
+  body[data-mobile-view="twoWeek"] .entry-panel,
+  body[data-mobile-view="twoWeek"] .search-panel {
+    display: none;
   }
 
   .utility-view {
