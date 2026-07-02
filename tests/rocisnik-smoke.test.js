@@ -195,7 +195,7 @@ async function run() {
         .split(" ")
         .filter(Boolean).length;
       const reminderIcon = document.querySelector('.search-panel .utility-tab[data-utility-view="reminders"] .utility-tab-icon svg')?.getBoundingClientRect();
-      const backupIconTargets = ["#exportEncryptedButton", "#importEncryptedButton"];
+      const backupIconTargets = ["#exportFutureIcsButton", "#exportEncryptedButton", "#importEncryptedButton"];
       const backupButtonsHaveIcons = backupIconTargets.every((selector) => {
         const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
         return iconStyle.content === '""' && iconStyle.maskImage !== "none";
@@ -305,6 +305,8 @@ async function run() {
     assert.equal(await page.locator(".side-column .import-options").count(), 0);
     await assertVisibleText(page, "#dataNotice", "Izvezi šifrirani backup");
     await assertVisibleText(page, "#dataNotice", "Uvezi šifrirani backup");
+    await assertVisibleText(page, "#dataNotice", "Izvezi buduća ročišta u kalendar (.ics)");
+    assert.equal(await page.locator("#exportFutureIcsButton").isVisible(), true);
     assert.equal(await page.locator("#importEncryptedButton").isVisible(), true);
     await page.click("#dataSafetyButton");
     await assertVisibleText(page, "#dataNotice .data-storage-note", "Podaci se čuvaju samo");
@@ -465,6 +467,13 @@ async function run() {
         disputeValue: "7.500 EUR"
       },
       {
+        ...buildStoredHearing("ics-future-special", tomorrow, "Željko, d.o.o.; Test", "Ana \\ Kovač"),
+        caseNumber: "P-ICS/2026",
+        disputeSubject: "Naknada, štete; ugovor",
+        specificity: "Bilješka \\ provjera"
+      },
+      buildStoredHearing("ics-past-record", yesterday, "ICS Proslo", "Test Osoba"),
+      {
         ...buildStoredHearing("two-week-early", today, "Dva Tjedna Rano", "Test Osoba"),
         hearingDateTime: toDateTimeInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 15))
       },
@@ -541,7 +550,7 @@ async function run() {
     await assertScheduleExcludes(page, "Datum Obrisano");
     const unselectedRowChrome = await page.evaluate(() => {
       const row = Array.from(document.querySelectorAll(".hearing-button"))
-        .find((button) => button.innerText.includes("Datum Odgodeno"));
+        .find((button) => button.innerText.includes("Datum Sutra") && !button.classList.contains("selected"));
       return row ? getComputedStyle(row).borderLeftColor : "";
     });
     assert.equal(unselectedRowChrome, "rgba(0, 0, 0, 0)");
@@ -716,6 +725,18 @@ async function run() {
     await assertVisibleText(page, "#detailsPlaintiff", "Croatia osiguranje");
     await assertVisibleText(page, "#detailsDefendant", "Marko Markovic");
     await assertVisibleText(page, "#detailsRecordId", hearings[0].id);
+    await assertVisibleText(page, "#exportSelectedIcsButton", "Izvezi u kalendar (.ics)");
+    const singleIcsDownloadPromise = page.waitForEvent("download");
+    await page.click("#exportSelectedIcsButton");
+    const singleIcsDownload = await singleIcsDownloadPromise;
+    assert.match(singleIcsDownload.suggestedFilename(), /^rocisnik-p1232026\.ics$/);
+    const singleIcsRaw = await fs.readFile(await singleIcsDownload.path(), "utf8");
+    assertIcsBasics(singleIcsRaw);
+    assert.ok(unfoldIcs(singleIcsRaw).includes("SUMMARY:Ročište: P-123/2026"));
+    assert.ok(unfoldIcs(singleIcsRaw).includes("DESCRIPTION:Broj predmeta: P-123/2026\\nTužitelj: Croatia osiguranje\\nTuženik: Marko Markovic"));
+    assert.ok(singleIcsRaw.includes("BEGIN:VALARM"));
+    assert.ok(singleIcsRaw.includes("TRIGGER:-PT30M"));
+    assert.ok(singleIcsRaw.includes("TRIGGER:-PT2H"));
     assert.equal(await page.locator(".side-column .details-panel").evaluate((element) => element.scrollHeight <= element.clientHeight + 1), true);
     assert.equal(await page.locator(".side-column .backup-note").evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -778,6 +799,20 @@ async function run() {
     await page.selectOption("#filterDeleted", "no");
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
+
+    const futureIcsDownloadPromise = page.waitForEvent("download");
+    await page.click("#exportFutureIcsButton");
+    const futureIcsDownload = await futureIcsDownloadPromise;
+    assert.match(futureIcsDownload.suggestedFilename(), /^rocisnik-buduca-rocista-\d{4}-\d{2}-\d{2}\.ics$/);
+    const futureIcsRaw = await fs.readFile(await futureIcsDownload.path(), "utf8");
+    const futureIcs = unfoldIcs(futureIcsRaw);
+    assertIcsBasics(futureIcsRaw);
+    assert.ok(futureIcs.includes("P-ICS/2026"), "Future ICS export should include future hearing");
+    assert.equal(futureIcs.includes("P-ics-past-record/2026"), false, "Future ICS export should not include past hearing");
+    assert.ok(futureIcs.includes("Tužitelj: Željko\\, d.o.o.\\; Test"));
+    assert.ok(futureIcs.includes("Tuženik: Ana \\\\ Kovač"));
+    assert.ok(futureIcs.includes("Predmet spora: Naknada\\, štete\\; ugovor"));
+    assert.ok(futureIcs.includes("Specifičnost: Bilješka \\\\ provjera"));
 
     await page.click("#backupReminderExportButton");
     await assertVisibleText(page, "#encryptedBackupModal", "Izvezi šifrirani backup");
@@ -1028,6 +1063,23 @@ async function assertScheduleIncludes(page, expectedText) {
 async function assertScheduleExcludes(page, unexpectedText) {
   const text = await page.locator("#calendarGrid").innerText();
   assert.equal(text.includes(unexpectedText), false, `Schedule should not contain "${unexpectedText}", got "${text}"`);
+}
+
+function assertIcsBasics(content) {
+  const normalized = unfoldIcs(content);
+  assert.ok(normalized.includes("BEGIN:VCALENDAR"));
+  assert.ok(normalized.includes("VERSION:2.0"));
+  assert.ok(normalized.includes("BEGIN:VEVENT"));
+  assert.ok(normalized.includes("UID:"));
+  assert.ok(normalized.includes("DTSTART:"));
+  assert.ok(normalized.includes("DTEND:"));
+  assert.ok(normalized.includes("SUMMARY:"));
+  assert.ok(normalized.includes("END:VEVENT"));
+  assert.ok(normalized.includes("END:VCALENDAR"));
+}
+
+function unfoldIcs(content) {
+  return content.replace(/\r?\n[ \t]/g, "");
 }
 
 run().catch((error) => {

@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=86">
+    <link rel="stylesheet" href="styles.css?v=87">
   </head>
   <body>
     <div class="app-shell">
@@ -479,6 +479,7 @@
 
             <div class="detail-actions">
               <button class="secondary-button" type="button" id="editButton">Uredi</button>
+              <button class="secondary-button" type="button" id="exportSelectedIcsButton">Izvezi u kalendar (.ics)</button>
               <button class="secondary-button" type="button" id="restoreButton" hidden>Vrati</button>
               <button class="danger-button" type="button" id="deleteButton">Obriši</button>
               <button class="ghost-button" type="button" id="moreDetailsButton">Više</button>
@@ -543,6 +544,7 @@
             <h2 id="dataNoticeTitle">Sigurnosna kopija</h2>
             <p class="data-storage-note">Podaci se čuvaju samo u ovom pregledniku. Za sigurnosnu kopiju koristite šifrirani backup.</p>
             <div class="backup-tools" aria-label="Izvoz i uvoz podataka">
+              <button class="secondary-button compact-button" type="button" id="exportFutureIcsButton">Izvezi buduća ročišta u kalendar (.ics)</button>
               <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
               <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
               <fieldset class="import-mode backup-import-mode" aria-label="Način uvoza">
@@ -656,6 +658,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=86"></script>
+    <script src="app.js?v=87"></script>
   </body>
 </html>

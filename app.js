@@ -20,6 +20,7 @@
   const REMINDER_CHECK_INTERVAL_MS = 60 * 1000;
   const REMINDER_SNOOZE_MINUTES = 60;
   const DEFAULT_REMINDER_MINUTES = 24 * 60;
+  const DEFAULT_HEARING_DURATION_MINUTES = 60;
   const PRESET_REMINDERS = [
     { id: "7d", label: "7 dana prije", minutesBefore: 7 * 24 * 60 },
     { id: "1d", label: "1 dan prije", minutesBefore: 24 * 60 },
@@ -205,6 +206,7 @@
     utilityButtons: Array.from(document.querySelectorAll("[data-utility-view]")),
     utilityReminderCounts: Array.from(document.querySelectorAll(".utility-reminder-count")),
     exportJsonButton: document.getElementById("exportJsonButton"),
+    exportFutureIcsButton: document.getElementById("exportFutureIcsButton"),
     exportEncryptedButton: document.getElementById("exportEncryptedButton"),
     importJsonButton: document.getElementById("importJsonButton"),
     importEncryptedButton: document.getElementById("importEncryptedButton"),
@@ -320,6 +322,7 @@
     historyCount: document.getElementById("historyCount"),
     detailsHistory: document.getElementById("detailsHistory"),
     editButton: document.getElementById("editButton"),
+    exportSelectedIcsButton: document.getElementById("exportSelectedIcsButton"),
     restoreButton: document.getElementById("restoreButton"),
     deleteButton: document.getElementById("deleteButton"),
     moreDetailsButton: document.getElementById("moreDetailsButton")
@@ -371,6 +374,7 @@
       if (!els.onboardingModal.hidden) dismissOnboarding();
     });
     els.exportJsonButton?.addEventListener("click", exportJsonBackup);
+    els.exportFutureIcsButton.addEventListener("click", exportFutureHearingsIcs);
     els.exportEncryptedButton.addEventListener("click", openEncryptedExportModal);
     els.backupReminderExportButton.addEventListener("click", openEncryptedExportModal);
     els.backupReminderLaterButton.addEventListener("click", snoozeBackupReminder);
@@ -406,6 +410,7 @@
     els.clearSelectionButton.addEventListener("click", goToNewHearingForm);
     els.quickAddButton?.addEventListener("click", goToNewHearingForm);
     els.editButton.addEventListener("click", startEditSelected);
+    els.exportSelectedIcsButton.addEventListener("click", exportSelectedHearingIcs);
     els.deleteButton.addEventListener("click", deleteSelected);
     els.restoreButton.addEventListener("click", restoreSelected);
     els.moreDetailsButton.addEventListener("click", toggleHistoryPanel);
@@ -980,6 +985,169 @@
     const content = JSON.stringify(payload, null, 2);
     const blob = new Blob([content], { type: "application/json" });
     downloadBlob(blob, filename);
+  }
+
+  function exportSelectedHearingIcs() {
+    const hearing = getSelectedHearing();
+    if (!hearing || isDeletedHearing(hearing)) {
+      showBackupMessage("Odaberite aktivno ročište za izvoz u kalendar.", "error");
+      return;
+    }
+
+    const content = buildIcsCalendar([hearing]);
+    const filename = `rocisnik-${sanitizeFilename(hearing.caseNumber || hearing.id || "rociste")}.ics`;
+    downloadTextFile(filename, content, "text/calendar;charset=utf-8");
+  }
+
+  function exportFutureHearingsIcs() {
+    const now = new Date();
+    const futureHearings = state.hearings
+      .filter((hearing) => !isDeletedHearing(hearing))
+      .filter((hearing) => {
+        const date = new Date(hearing.hearingDateTime);
+        return !Number.isNaN(date.getTime()) && date > now;
+      })
+      .sort((a, b) => new Date(a.hearingDateTime) - new Date(b.hearingDateTime));
+
+    if (!futureHearings.length) {
+      showBackupMessage("Nema budućih ročišta za izvoz u kalendar.", "error");
+      return;
+    }
+
+    const content = buildIcsCalendar(futureHearings);
+    downloadTextFile(`rocisnik-buduca-rocista-${toDateKey(new Date())}.ics`, content, "text/calendar;charset=utf-8");
+    showBackupMessage(`Izvezeno je ${formatHearingCount(futureHearings.length)} u kalendar.`);
+  }
+
+  function buildIcsCalendar(hearings) {
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Rocisnik//Local Hearing Calendar//HR",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      ...hearings.map(buildIcsEvent).flat(),
+      "END:VCALENDAR"
+    ];
+
+    return `${lines.map(foldIcsLine).join("\r\n")}\r\n`;
+  }
+
+  function buildIcsEvent(hearing) {
+    const start = new Date(hearing.hearingDateTime);
+    const end = new Date(start);
+    end.setMinutes(end.getMinutes() + DEFAULT_HEARING_DURATION_MINUTES);
+
+    const lines = [
+      "BEGIN:VEVENT",
+      `UID:${escapeIcsText(`${hearing.id || createId()}@rocisnik.local`)}`,
+      `DTSTAMP:${formatIcsDateTime(new Date())}`,
+      `DTSTART:${formatIcsDateTime(start)}`,
+      `DTEND:${formatIcsDateTime(end)}`,
+      `SUMMARY:${escapeIcsText(getIcsSummary(hearing))}`,
+      `DESCRIPTION:${escapeIcsText(getIcsDescription(hearing))}`,
+      `STATUS:${getIcsStatus(hearing.status)}`
+    ];
+
+    const alarms = getIcsAlarms(hearing);
+    lines.push(...alarms);
+    lines.push("END:VEVENT");
+    return lines;
+  }
+
+  function getIcsSummary(hearing) {
+    if (hearing.caseNumber) return `Ročište: ${hearing.caseNumber}`;
+    if (hearing.plaintiff || hearing.defendant) return `Ročište: ${[hearing.plaintiff, hearing.defendant].filter(Boolean).join(" - ")}`;
+    return "Ročište";
+  }
+
+  function getIcsDescription(hearing) {
+    return [
+      ["Broj predmeta", hearing.caseNumber],
+      ["Tužitelj", hearing.plaintiff],
+      ["Tuženik", hearing.defendant],
+      ["Predmet spora", hearing.disputeSubject],
+      ["Vrijednost spora", hearing.disputeValue],
+      ["Status", getStatusLabel(hearing.status)],
+      ["Specifičnost", hearing.specificity]
+    ]
+      .filter(([, value]) => String(value || "").trim())
+      .map(([label, value]) => `${label}: ${value}`)
+      .join("\n");
+  }
+
+  function getIcsStatus(status) {
+    const normalized = normalizeStatus(status);
+    if (normalized === "otkazano") return "CANCELLED";
+    if (normalized === "odgođeno") return "TENTATIVE";
+    return "CONFIRMED";
+  }
+
+  function getIcsAlarms(hearing) {
+    if (hearing.reminderDisabled) return [];
+
+    return normalizeReminders(hearing.reminders).map((reminder) => [
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Podsjetnik za ročište",
+      `TRIGGER:${formatIcsTrigger(reminder.minutesBefore)}`,
+      "END:VALARM"
+    ]).flat();
+  }
+
+  function formatIcsTrigger(minutesBefore) {
+    const safeMinutes = Math.max(1, Math.floor(Number(minutesBefore) || DEFAULT_REMINDER_MINUTES));
+    const days = Math.floor(safeMinutes / (24 * 60));
+    const hours = Math.floor((safeMinutes % (24 * 60)) / 60);
+    const minutes = safeMinutes % 60;
+    const datePart = days ? `${days}D` : "";
+    const timeParts = [
+      hours ? `${hours}H` : "",
+      minutes ? `${minutes}M` : ""
+    ].join("");
+    return `-${datePart ? `P${datePart}` : "P"}${timeParts ? `T${timeParts}` : ""}`;
+  }
+
+  function formatIcsDateTime(date) {
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+  }
+
+  function escapeIcsText(value) {
+    return String(value || "")
+      .replaceAll("\\", "\\\\")
+      .replaceAll("\r\n", "\n")
+      .replaceAll("\r", "\n")
+      .replaceAll("\n", "\\n")
+      .replaceAll(";", "\\;")
+      .replaceAll(",", "\\,");
+  }
+
+  function foldIcsLine(line) {
+    const chars = Array.from(String(line));
+    const chunks = [];
+    let current = "";
+
+    chars.forEach((char) => {
+      if ([...current, char].length > 75) {
+        chunks.push(current);
+        current = char;
+        return;
+      }
+      current += char;
+    });
+
+    if (current) chunks.push(current);
+    return chunks.join("\r\n ");
+  }
+
+  function downloadTextFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    downloadBlob(blob, filename);
+  }
+
+  function sanitizeFilename(value) {
+    return normalizeSearch(value) || "rociste";
   }
 
   function showEncryptedBackupMessage(message, type = "success") {
@@ -2438,6 +2606,7 @@
     els.deletedStatus.hidden = !deleted;
     els.deletedStatus.textContent = deleted ? getDeletedLabel(hearing, true) : "";
     els.editButton.hidden = deleted;
+    els.exportSelectedIcsButton.hidden = deleted;
     els.deleteButton.hidden = deleted;
     els.restoreButton.hidden = !deleted;
     els.moreDetailsButton.hidden = false;
