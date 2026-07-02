@@ -23,6 +23,19 @@ Ročišnik može izvesti ročišta u `.ics` kalendarsku datoteku.
 
 Sistemski podsjetnici kalendarske aplikacije pouzdaniji su od in-app podsjetnika kada je Ročišnik zatvoren, zato je za važne termine korisno uvesti događaje i u kalendar.
 
+## Lokalna lozinka i zaključavanje
+
+Ročišnik koristi lokalnu lozinku za zaključavanje prikaza aplikacije u ovom pregledniku.
+
+- Pri prvom korištenju potrebno je postaviti lozinku od najmanje 10 znakova.
+- Lozinka se ne sprema u čitljivom obliku. Aplikacija sprema samo šifrirani verifier izveden kroz Web Crypto API, PBKDF2 i AES-GCM.
+- Nakon osvježavanja stranice ili ponovnog otvaranja aplikacije potrebno je unijeti lozinku.
+- Gumb **Zaključaj** ručno skriva aplikaciju i uklanja prikazane podatke iz sučelja.
+- Aplikacija se automatski zaključava nakon 15 minuta neaktivnosti.
+- Zaboravljena lozinka ne može se vratiti. Minimalni recovery je brisanje lokalnih podataka u tom pregledniku i ponovno postavljanje aplikacije.
+
+Ova zaštita ne štiti od kompromitiranog uređaja, malwarea, zlonamjernih browser ekstenzija ili osobe koja ima pristup već otključanom uređaju.
+
 ## Napomena
 
 Podaci su lokalni za svaki preglednik i uređaj. Ročišta unesena na Android mobitelu ostaju spremljena u tom mobilnom pregledniku, ali se ne sinkroniziraju s računalom.

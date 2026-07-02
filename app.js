@@ -10,8 +10,11 @@
   const LAST_JSON_IMPORT_AT_KEY = "rocisnik.lastJsonImportAt";
   const BACKUP_REMINDER_SNOOZE_UNTIL_KEY = "rocisnik.backupReminderSnoozeUntil.v1";
   const DEFAULT_REMINDER_KEY = "rocisnik.defaultReminder.v1";
+  const LOCK_VERIFIER_KEY = "rocisnik.lockVerifier.v1";
   const BACKUP_FORMAT_VERSION = 1;
   const ENCRYPTED_BACKUP_FORMAT_VERSION = 1;
+  const LOCK_VERIFIER_VERSION = 1;
+  const LOCK_VERIFIER_PAYLOAD = "rocisnik-verifier-v1";
   const ENCRYPTED_BACKUP_KDF_ITERATIONS = 250000;
   const ENCRYPTED_BACKUP_SALT_BYTES = 16;
   const ENCRYPTED_BACKUP_IV_BYTES = 12;
@@ -21,6 +24,8 @@
   const REMINDER_SNOOZE_MINUTES = 60;
   const DEFAULT_REMINDER_MINUTES = 24 * 60;
   const DEFAULT_HEARING_DURATION_MINUTES = 60;
+  const AUTO_LOCK_MINUTES = 15;
+  const AUTO_LOCK_MS = getAutoLockMs();
   const PRESET_REMINDERS = [
     { id: "7d", label: "7 dana prije", minutesBefore: 7 * 24 * 60 },
     { id: "1d", label: "1 dan prije", minutesBefore: 24 * 60 },
@@ -144,6 +149,11 @@
     searchError: "",
     showAllSearchResults: false,
     activeReminders: [],
+    appStarted: false,
+    unlocked: false,
+    sessionKey: null,
+    autoLockTimer: null,
+    hiddenAt: 0,
     filters: {
       plaintiff: "",
       defendant: "",
@@ -161,6 +171,22 @@
   let newHearingFocusTimer = 0;
 
   const els = {
+    appShell: document.getElementById("appShell"),
+    lockScreen: document.getElementById("lockScreen"),
+    lockSetupForm: document.getElementById("lockSetupForm"),
+    lockSetupPassword: document.getElementById("lockSetupPassword"),
+    lockSetupPasswordConfirm: document.getElementById("lockSetupPasswordConfirm"),
+    lockSetupShowPassword: document.getElementById("lockSetupShowPassword"),
+    lockSetupMessage: document.getElementById("lockSetupMessage"),
+    lockUnlockForm: document.getElementById("lockUnlockForm"),
+    lockUnlockPassword: document.getElementById("lockUnlockPassword"),
+    lockUnlockShowPassword: document.getElementById("lockUnlockShowPassword"),
+    lockUnlockMessage: document.getElementById("lockUnlockMessage"),
+    forgotPasswordButton: document.getElementById("forgotPasswordButton"),
+    lockResetForm: document.getElementById("lockResetForm"),
+    lockResetConfirm: document.getElementById("lockResetConfirm"),
+    lockResetMessage: document.getElementById("lockResetMessage"),
+    lockResetCancelButton: document.getElementById("lockResetCancelButton"),
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
@@ -177,6 +203,7 @@
     dataNotice: document.getElementById("dataNotice"),
     dataSafetyButton: document.getElementById("dataSafetyButton"),
     settingsButton: document.getElementById("settingsButton"),
+    lockAppButton: document.getElementById("lockAppButton"),
     footerHelpButton: document.getElementById("footerHelpButton"),
     footerOnboardingButton: document.getElementById("footerOnboardingButton"),
     dismissDataNoticeButton: document.getElementById("dismissDataNoticeButton"),
@@ -336,6 +363,30 @@
   function init() {
     normalizePublicUrl();
     registerServiceWorker();
+    bindLockEvents();
+    if (!isWebCryptoAvailable()) {
+      showLockSetupMessage("Zaključavanje nije dostupno u ovom pregledniku jer Web Crypto API nije podržan.", "error");
+      showSetupScreen();
+      return;
+    }
+    if (getLockVerifier()) {
+      showUnlockScreen();
+      return;
+    }
+    showSetupScreen();
+  }
+
+  function startApplication() {
+    normalizePublicUrl();
+    registerServiceWorker();
+    if (state.appStarted) {
+      state.hearings = loadHearings();
+      render();
+      checkDueReminders();
+      startAutoLockTimer();
+      return;
+    }
+    state.appStarted = true;
     state.hearings = loadHearings();
     if (state.hearings.length) saveHearings();
     if (hasTodayActiveHearings()) state.scheduleView = "today";
@@ -408,6 +459,7 @@
     });
     els.cancelEditButton.addEventListener("click", resetForm);
     els.clearSelectionButton.addEventListener("click", goToNewHearingForm);
+    els.lockAppButton.addEventListener("click", lockApp);
     els.quickAddButton?.addEventListener("click", goToNewHearingForm);
     els.editButton.addEventListener("click", startEditSelected);
     els.exportSelectedIcsButton.addEventListener("click", exportSelectedHearingIcs);
@@ -490,6 +542,298 @@
     const nextSearch = params.toString();
     const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
     window.history.replaceState({}, document.title, nextUrl);
+  }
+
+  function getAutoLockMs() {
+    const testValue = Number(new URLSearchParams(window.location.search).get("qaAutoLockMs"));
+    if (Number.isFinite(testValue) && testValue >= 100) return testValue;
+    return AUTO_LOCK_MINUTES * 60 * 1000;
+  }
+
+  function bindLockEvents() {
+    els.lockSetupForm.addEventListener("submit", handleLockSetup);
+    els.lockUnlockForm.addEventListener("submit", handleUnlockSubmit);
+    els.lockResetForm.addEventListener("submit", handleLockReset);
+    els.lockSetupShowPassword.addEventListener("change", () => togglePasswordInputs(
+      els.lockSetupShowPassword.checked,
+      els.lockSetupPassword,
+      els.lockSetupPasswordConfirm
+    ));
+    els.lockUnlockShowPassword.addEventListener("change", () => togglePasswordInputs(
+      els.lockUnlockShowPassword.checked,
+      els.lockUnlockPassword
+    ));
+    els.forgotPasswordButton.addEventListener("click", showResetScreen);
+    els.lockResetCancelButton.addEventListener("click", showUnlockScreen);
+
+    ["click", "keydown", "pointerdown", "touchstart", "focus"].forEach((eventName) => {
+      document.addEventListener(eventName, resetAutoLockTimer, true);
+    });
+    document.addEventListener("visibilitychange", handleVisibilityForAutoLock);
+  }
+
+  async function handleLockSetup(event) {
+    event.preventDefault();
+    showLockSetupMessage("");
+    const password = els.lockSetupPassword.value;
+    const confirmation = els.lockSetupPasswordConfirm.value;
+
+    if (password.length < 10) {
+      showLockSetupMessage("Lozinka mora imati najmanje 10 znakova.", "error");
+      return;
+    }
+    if (password !== confirmation) {
+      showLockSetupMessage("Lozinke se ne podudaraju.", "error");
+      return;
+    }
+
+    try {
+      const { verifier, key } = await createLockVerifier(password);
+      window.localStorage.setItem(LOCK_VERIFIER_KEY, JSON.stringify(verifier));
+      els.lockSetupPassword.value = "";
+      els.lockSetupPasswordConfirm.value = "";
+      unlockApp(key);
+    } catch (error) {
+      showLockSetupMessage("Postavljanje lozinke nije uspjelo. Pokušajte ponovno.", "error");
+    }
+  }
+
+  async function handleUnlockSubmit(event) {
+    event.preventDefault();
+    showLockUnlockMessage("");
+    try {
+      const key = await verifyLockPassword(els.lockUnlockPassword.value);
+      els.lockUnlockPassword.value = "";
+      unlockApp(key);
+    } catch (error) {
+      showLockUnlockMessage("Lozinka nije ispravna.", "error");
+    }
+  }
+
+  function handleLockReset(event) {
+    event.preventDefault();
+    if (els.lockResetConfirm.value.trim() !== "OBRIŠI") {
+      showLockResetMessage("Za potvrdu upišite OBRIŠI.", "error");
+      return;
+    }
+
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith("rocisnik.") || key === SECURITY_NOTICE_ACCEPTED_AT_KEY || key === ONBOARDING_COMPLETED_AT_KEY)
+      .forEach((key) => window.localStorage.removeItem(key));
+    state.hearings = [];
+    state.selectedId = null;
+    state.editingId = null;
+    state.unlocked = false;
+    state.sessionKey = null;
+    state.appStarted = false;
+    els.lockResetConfirm.value = "";
+    showLockSetupMessage("Lokalni podaci su obrisani. Postavite novu lozinku.", "success");
+    showSetupScreen();
+  }
+
+  async function createLockVerifier(password) {
+    const salt = generateRandomBytes(ENCRYPTED_BACKUP_SALT_BYTES);
+    const iv = generateRandomBytes(ENCRYPTED_BACKUP_IV_BYTES);
+    const key = await deriveEncryptionKey(password, salt, ENCRYPTED_BACKUP_KDF_ITERATIONS);
+    const encoded = new TextEncoder().encode(LOCK_VERIFIER_PAYLOAD);
+    const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+    const now = new Date().toISOString();
+    return {
+      key,
+      verifier: {
+        version: LOCK_VERIFIER_VERSION,
+        type: "rocisnik-lock-verifier",
+        kdf: "PBKDF2",
+        hash: "SHA-256",
+        iterations: ENCRYPTED_BACKUP_KDF_ITERATIONS,
+        salt: arrayBufferToBase64(salt),
+        iv: arrayBufferToBase64(iv),
+        ciphertext: arrayBufferToBase64(ciphertext),
+        createdAt: now,
+        updatedAt: now
+      }
+    };
+  }
+
+  async function verifyLockPassword(password) {
+    if (!password) throw new Error("Missing password");
+    const verifier = getLockVerifier();
+    validateLockVerifier(verifier);
+    const salt = base64ToUint8Array(verifier.salt);
+    const iv = base64ToUint8Array(verifier.iv);
+    const ciphertext = base64ToUint8Array(verifier.ciphertext);
+    const key = await deriveEncryptionKey(password, salt, verifier.iterations);
+    const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+    if (new TextDecoder().decode(decrypted) !== LOCK_VERIFIER_PAYLOAD) throw new Error("Invalid verifier");
+    return key;
+  }
+
+  function validateLockVerifier(verifier) {
+    if (!verifier || verifier.version !== LOCK_VERIFIER_VERSION || verifier.type !== "rocisnik-lock-verifier") throw new Error("Invalid verifier");
+    if (verifier.kdf !== "PBKDF2" || verifier.hash !== "SHA-256") throw new Error("Invalid KDF");
+    if (!Number.isInteger(verifier.iterations) || verifier.iterations < ENCRYPTED_BACKUP_KDF_ITERATIONS) throw new Error("Invalid iterations");
+    if (!verifier.salt || !verifier.iv || !verifier.ciphertext) throw new Error("Missing verifier data");
+  }
+
+  function getLockVerifier() {
+    try {
+      return JSON.parse(window.localStorage.getItem(LOCK_VERIFIER_KEY) || "null");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function unlockApp(sessionKey) {
+    state.unlocked = true;
+    state.sessionKey = sessionKey;
+    els.lockScreen.hidden = true;
+    els.appShell.hidden = false;
+    startApplication();
+    startAutoLockTimer();
+  }
+
+  function lockApp() {
+    if (!state.unlocked) return;
+    state.unlocked = false;
+    state.sessionKey = null;
+    stopAutoLockTimer();
+    clearSensitiveUi();
+    els.appShell.hidden = true;
+    showUnlockScreen();
+  }
+
+  function getSessionKey() {
+    return state.sessionKey;
+  }
+
+  function isUnlocked() {
+    return state.unlocked;
+  }
+
+  function showSetupScreen() {
+    stopAutoLockTimer();
+    els.appShell.hidden = true;
+    els.lockScreen.hidden = false;
+    els.lockSetupForm.hidden = false;
+    els.lockUnlockForm.hidden = true;
+    els.lockResetForm.hidden = true;
+    showLockUnlockMessage("");
+    showLockResetMessage("");
+    window.requestAnimationFrame(() => els.lockSetupPassword.focus());
+  }
+
+  function showUnlockScreen() {
+    stopAutoLockTimer();
+    els.appShell.hidden = true;
+    els.lockScreen.hidden = false;
+    els.lockSetupForm.hidden = true;
+    els.lockUnlockForm.hidden = false;
+    els.lockResetForm.hidden = true;
+    showLockSetupMessage("");
+    showLockResetMessage("");
+    window.requestAnimationFrame(() => els.lockUnlockPassword.focus());
+  }
+
+  function showResetScreen() {
+    els.lockSetupForm.hidden = true;
+    els.lockUnlockForm.hidden = true;
+    els.lockResetForm.hidden = false;
+    showLockUnlockMessage("");
+    showLockResetMessage("");
+    window.requestAnimationFrame(() => els.lockResetConfirm.focus());
+  }
+
+  function clearSensitiveUi() {
+    state.hearings = [];
+    state.selectedId = null;
+    state.editingId = null;
+    state.activeReminders = [];
+    els.calendarGrid.replaceChildren();
+    els.twoWeekCalendar.replaceChildren();
+    els.twoWeekSummary.replaceChildren();
+    els.searchResults.replaceChildren();
+    els.remindersList.replaceChildren();
+    els.detailsHistory.replaceChildren();
+    els.detailsHeaderStatus.replaceChildren();
+    els.detailsStatus.replaceChildren();
+    els.detailsReminders.textContent = "";
+    els.detailsContent.hidden = true;
+    els.detailsEmpty.hidden = false;
+    els.detailsSubtitle.textContent = "Odaberi raspravu za prikaz detalja.";
+    [
+      els.detailsParties,
+      els.detailsCaseParties,
+      els.detailsTime,
+      els.detailsCaseNumber,
+      els.detailsDateTime,
+      els.detailsPlaintiff,
+      els.detailsDefendant,
+      els.detailsDisputeSubject,
+      els.detailsDisputeValue,
+      els.detailsSpecificity,
+      els.detailsRecordId,
+      els.formMessage,
+      els.searchMessage,
+      els.backupMessage
+    ].forEach((element) => {
+      if (element) element.textContent = "";
+    });
+    els.form.reset();
+    Object.values(els.filters).forEach((input) => {
+      input.value = "";
+    });
+    els.scheduleQuickSearch.value = "";
+  }
+
+  function startAutoLockTimer() {
+    if (!state.unlocked) return;
+    stopAutoLockTimer();
+    state.autoLockTimer = window.setTimeout(lockApp, AUTO_LOCK_MS);
+  }
+
+  function stopAutoLockTimer() {
+    if (state.autoLockTimer) window.clearTimeout(state.autoLockTimer);
+    state.autoLockTimer = null;
+  }
+
+  function resetAutoLockTimer() {
+    if (state.unlocked) startAutoLockTimer();
+  }
+
+  function handleVisibilityForAutoLock() {
+    if (!state.unlocked) return;
+    if (document.visibilityState === "hidden") {
+      state.hiddenAt = Date.now();
+      return;
+    }
+    if (state.hiddenAt && Date.now() - state.hiddenAt >= AUTO_LOCK_MS) {
+      lockApp();
+      return;
+    }
+    state.hiddenAt = 0;
+    startAutoLockTimer();
+  }
+
+  function togglePasswordInputs(show, ...inputs) {
+    inputs.forEach((input) => {
+      input.type = show ? "text" : "password";
+    });
+  }
+
+  function showLockSetupMessage(message, type = "success") {
+    els.lockSetupMessage.textContent = message;
+    els.lockSetupMessage.classList.toggle("error", type === "error");
+    els.lockSetupMessage.classList.toggle("success", type === "success" && Boolean(message));
+  }
+
+  function showLockUnlockMessage(message, type = "error") {
+    els.lockUnlockMessage.textContent = message;
+    els.lockUnlockMessage.classList.toggle("error", type === "error" && Boolean(message));
+  }
+
+  function showLockResetMessage(message, type = "error") {
+    els.lockResetMessage.textContent = message;
+    els.lockResetMessage.classList.toggle("error", type === "error" && Boolean(message));
   }
 
   function syncDataNotice() {

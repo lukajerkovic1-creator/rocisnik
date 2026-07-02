@@ -9,10 +9,74 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=87">
+    <link rel="stylesheet" href="styles.css?v=88">
   </head>
   <body>
-    <div class="app-shell">
+    <main class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
+      <section class="lock-card">
+        <div class="brand-block lock-brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3v18M6 7h12M7 7l-4 7h8L7 7Zm10 0-4 7h8l-4-7ZM9 21h6" />
+            </svg>
+          </div>
+          <div>
+            <h1 id="lockTitle">Ročišnik</h1>
+            <p>Osobni raspored sudskih ročišta</p>
+          </div>
+        </div>
+
+        <form class="lock-form" id="lockSetupForm" novalidate hidden>
+          <h2>Postavite lozinku za Ročišnik</h2>
+          <p>Ako zaboravite lozinku, lokalni podaci se ne mogu vratiti osim iz sigurnosne kopije.</p>
+          <p>Aplikacija ne šalje podatke na server.</p>
+          <label>
+            <span>Lozinka</span>
+            <input id="lockSetupPassword" type="password" autocomplete="new-password" minlength="10">
+          </label>
+          <label>
+            <span>Ponovite lozinku</span>
+            <input id="lockSetupPasswordConfirm" type="password" autocomplete="new-password" minlength="10">
+          </label>
+          <label class="password-toggle">
+            <input id="lockSetupShowPassword" type="checkbox">
+            <span>Prikaži lozinku</span>
+          </label>
+          <p class="lock-message" id="lockSetupMessage" role="status" aria-live="polite"></p>
+          <button class="primary-button" type="submit">Postavi lozinku</button>
+        </form>
+
+        <form class="lock-form" id="lockUnlockForm" novalidate hidden>
+          <h2>Otključajte Ročišnik</h2>
+          <p>Unesite lokalnu lozinku za prikaz spremljenih ročišta.</p>
+          <label>
+            <span>Lozinka</span>
+            <input id="lockUnlockPassword" type="password" autocomplete="current-password">
+          </label>
+          <label class="password-toggle">
+            <input id="lockUnlockShowPassword" type="checkbox">
+            <span>Prikaži lozinku</span>
+          </label>
+          <p class="lock-message" id="lockUnlockMessage" role="status" aria-live="polite"></p>
+          <button class="primary-button" type="submit">Otključaj</button>
+          <button class="text-button lock-forgot-button" type="button" id="forgotPasswordButton">Zaboravio/la sam lozinku</button>
+        </form>
+
+        <form class="lock-form lock-reset" id="lockResetForm" novalidate hidden>
+          <h2>Reset lozinke</h2>
+          <p>Lozinku nije moguće vratiti. Možete obrisati lokalne podatke u ovom pregledniku i ponovno postaviti aplikaciju.</p>
+          <label>
+            <span>Za potvrdu upišite OBRIŠI</span>
+            <input id="lockResetConfirm" type="text" autocomplete="off">
+          </label>
+          <p class="lock-message" id="lockResetMessage" role="status" aria-live="polite"></p>
+          <button class="danger-button" type="submit">Obriši lokalne podatke</button>
+          <button class="ghost-button" type="button" id="lockResetCancelButton">Odustani</button>
+        </form>
+      </section>
+    </main>
+
+    <div class="app-shell" id="appShell" hidden>
       <header class="topbar">
         <div class="brand-block">
           <div class="brand-mark" aria-hidden="true">
@@ -28,6 +92,15 @@
         </div>
         <div class="topbar-actions">
           <button class="primary-button topbar-primary" type="button" id="clearSelectionButton">Novo ročište</button>
+          <button class="text-button" type="button" id="lockAppButton">
+            <span class="topbar-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+            </span>
+            Zaključaj
+          </button>
           <button class="text-button" type="button" id="dataSafetyButton">
             <span class="topbar-action-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" focusable="false">
@@ -658,6 +731,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=87"></script>
+    <script src="app.js?v=88"></script>
   </body>
 </html>

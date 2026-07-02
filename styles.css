@@ -95,6 +95,95 @@ select:focus-visible {
   padding: 16px 18px 10px;
 }
 
+.lock-screen {
+  display: grid;
+  min-height: 100vh;
+  padding: 18px;
+  place-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 248, 250, 0.98)),
+    var(--bg);
+}
+
+.lock-card {
+  width: min(100%, 460px);
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.lock-brand {
+  margin-bottom: 20px;
+}
+
+.lock-brand h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.lock-brand p,
+.lock-form p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.lock-form {
+  display: grid;
+  gap: 14px;
+}
+
+.lock-form h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.18;
+}
+
+.lock-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--accent-strong);
+  font-weight: 720;
+}
+
+.lock-form input[type="password"],
+.lock-form input[type="text"] {
+  min-height: 46px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text);
+}
+
+.lock-form .password-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.lock-message {
+  min-height: 20px;
+  font-weight: 700;
+}
+
+.lock-message.error {
+  color: var(--danger);
+}
+
+.lock-message.success {
+  color: var(--accent);
+}
+
+.lock-forgot-button {
+  justify-self: center;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

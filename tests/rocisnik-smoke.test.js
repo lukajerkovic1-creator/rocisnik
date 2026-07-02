@@ -13,6 +13,8 @@ const LAST_JSON_EXPORT_AT_KEY = "rocisnik.lastJsonExportAt";
 const LAST_JSON_IMPORT_AT_KEY = "rocisnik.lastJsonImportAt";
 const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
 const ONBOARDING_COMPLETED_AT_KEY = "onboardingCompletedAt";
+const LOCK_VERIFIER_KEY = "rocisnik.lockVerifier.v1";
+const TEST_LOCK_PASSWORD = "SigurnaLozinka123!";
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -88,13 +90,44 @@ async function run() {
     assert.equal(normalizedUrl.searchParams.get("qa"), "smoke-regression");
 
     assert.equal(await page.title(), "Ročišnik");
-    await assertVisibleText(page, "h1", "Ročišnik");
+    await assertVisibleText(page, "#lockTitle", "Ročišnik");
+    await assertVisibleText(page, "#lockSetupForm", "Postavite lozinku za Ročišnik");
+    assert.equal(await page.locator("#appShell").isHidden(), true);
+    await page.fill("#lockSetupPassword", "kratko");
+    await page.fill("#lockSetupPasswordConfirm", "kratko");
+    await page.click('#lockSetupForm button[type="submit"]');
+    await assertVisibleText(page, "#lockSetupMessage", "najmanje 10 znakova");
+    await page.fill("#lockSetupPassword", TEST_LOCK_PASSWORD);
+    await page.fill("#lockSetupPasswordConfirm", "DrugaLozinka123!");
+    await page.click('#lockSetupForm button[type="submit"]');
+    await assertVisibleText(page, "#lockSetupMessage", "Lozinke se ne podudaraju.");
+    await page.fill("#lockSetupPassword", TEST_LOCK_PASSWORD);
+    await page.fill("#lockSetupPasswordConfirm", TEST_LOCK_PASSWORD);
+    await page.click('#lockSetupForm button[type="submit"]');
+    await page.waitForFunction(() => !document.querySelector("#appShell")?.hidden);
+    const lockVerifier = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), LOCK_VERIFIER_KEY);
+    assert.equal(lockVerifier.type, "rocisnik-lock-verifier");
+    assert.equal(lockVerifier.kdf, "PBKDF2");
+    assert.equal(lockVerifier.hash, "SHA-256");
+    assert.ok(lockVerifier.iterations >= 250000);
+    assert.ok(lockVerifier.salt);
+    assert.ok(lockVerifier.iv);
+    assert.ok(lockVerifier.ciphertext);
+    assert.equal(JSON.stringify(lockVerifier).includes(TEST_LOCK_PASSWORD), false);
     await assertVisibleText(page, "#onboardingModal", "Kako koristiti Ročišnik");
     await assertVisibleText(page, "#onboardingModal", "Redovito izvozite sigurnosnu kopiju");
     await page.click("#onboardingFinishButton");
     assert.equal(await page.locator("#onboardingModal").isHidden(), true);
     assert.ok(await page.evaluate((key) => localStorage.getItem(key), ONBOARDING_COMPLETED_AT_KEY));
     await page.reload({ waitUntil: "domcontentloaded" });
+    await assertVisibleText(page, "#lockUnlockForm", "Otključajte Ročišnik");
+    assert.equal(await page.locator("#appShell").isHidden(), true);
+    await page.fill("#lockUnlockPassword", "PogresnaLozinka123!");
+    await page.click('#lockUnlockForm button[type="submit"]');
+    await page.waitForFunction(() => document.querySelector("#lockUnlockMessage")?.textContent.includes("Lozinka nije ispravna."));
+    await assertVisibleText(page, "#lockUnlockMessage", "Lozinka nije ispravna.");
+    assert.equal(await page.locator("#appShell").isHidden(), true);
+    await unlockExistingApp(page);
     assert.equal(await page.locator("#onboardingModal").isHidden(), true);
     await page.click("#onboardingButton");
     await assertActivePanel(page, "#onboardingModal .modal-panel");
@@ -118,6 +151,7 @@ async function run() {
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
     assert.ok(await page.evaluate((key) => localStorage.getItem(key), SECURITY_NOTICE_ACCEPTED_AT_KEY));
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
     assert.equal(await page.locator("#securityPrompt").isHidden(), true);
     await assertScheduleViewActive(page, "next30");
     await assertVisibleText(page, "#summaryTodayCount", "0");
@@ -319,6 +353,7 @@ async function run() {
     };
     await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: onlyDeleted });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
     await assertVisibleText(page, ".schedule-empty", "Sva ročišta su obrisana.");
     await assertVisibleText(page, ".schedule-empty", "Prikaži obrisane zapise");
     await page.click(".schedule-empty button");
@@ -328,6 +363,7 @@ async function run() {
     const futureOnly = buildStoredHearing("future-only-record", addDays(startOfDay(new Date()), 45), "Daleki Termin", "Test Osoba");
     await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: futureOnly });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
     await page.click('.schedule-view-tabs [data-schedule-view="today"]');
     await assertVisibleText(page, ".schedule-empty", "Nema ročišta danas.");
     await page.click('.schedule-view-tabs [data-schedule-view="week"]');
@@ -339,6 +375,7 @@ async function run() {
 
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
 
     await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
@@ -429,6 +466,13 @@ async function run() {
     assert.ok(backupReminderChrome.height <= 56, `Backup reminder should stay compact, got ${backupReminderChrome.height}px`);
     assert.equal(backupReminderChrome.buttonCount, 3);
     assert.equal(backupReminderChrome.firstActionVisible, true);
+    await page.click("#lockAppButton");
+    await assertVisibleText(page, "#lockUnlockForm", "Otključajte Ročišnik");
+    assert.equal(await page.locator("#appShell").isHidden(), true);
+    const lockedDomText = await page.evaluate(() => document.body.textContent);
+    assert.equal(lockedDomText.includes("Croatia osiguranje"), false);
+    assert.equal(lockedDomText.includes("P-123/2026"), false);
+    await unlockExistingApp(page);
     await page.click('.entry-panel [data-utility-view="reminders"]');
     await assertVisibleText(page, "#remindersList", "Croatia osiguranje - Marko Markovic");
     await assertVisibleText(page, "#remindersList", "2 sata prije");
@@ -496,6 +540,7 @@ async function run() {
       localStorage.setItem(key, JSON.stringify([...existing, ...records]));
     }, { key: STORAGE_KEY, records: seededHearings });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
     await assertVisibleText(page, ".mobile-tabs", "Raspored");
     assert.equal(await page.locator('.mobile-tab[data-mobile-view="twoWeek"]').count(), 0);
     await page.click('.mobile-tab[data-mobile-view="schedule"]');
@@ -798,6 +843,7 @@ async function run() {
     await page.evaluate((key) => localStorage.removeItem(key), LAST_BACKUP_AT_KEY);
     await page.selectOption("#filterDeleted", "no");
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
 
     const futureIcsDownloadPromise = page.waitForEvent("download");
@@ -877,8 +923,20 @@ async function run() {
     assert.equal(storageAfterEncryptedImport.includes("SigurnaLozinka123!"), false);
     await page.check('input[name="importMode"][value="append"]');
 
+    const autoLockPage = await context.newPage();
+    await autoLockPage.goto(`${app.url}&qaAutoLockMs=300`, { waitUntil: "domcontentloaded" });
+    await unlockExistingApp(autoLockPage);
+    await assertVisibleText(autoLockPage, "body", "Croatia osiguranje");
+    await autoLockPage.waitForTimeout(750);
+    await assertVisibleText(autoLockPage, "#lockUnlockForm", "Otključajte Ročišnik");
+    assert.equal(await autoLockPage.locator("#appShell").isHidden(), true);
+    const autoLockedText = await autoLockPage.evaluate(() => document.body.textContent);
+    assert.equal(autoLockedText.includes("Croatia osiguranje"), false);
+    await autoLockPage.close();
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await unlockExistingApp(page);
     assert.equal(await page.locator(".mobile-tabs").isVisible(), true);
     assert.equal(await page.locator('.mobile-tab[data-mobile-view="twoWeek"]').count(), 0);
     await page.click('.mobile-tab[data-mobile-view="schedule"]');
@@ -1001,6 +1059,14 @@ async function assertNewHearingFormReady(page) {
   assert.equal(formViewport.panelHighlighted, true);
   assert.equal(formViewport.panelActive, true);
   assert.equal(formViewport.noHorizontalScroll, true);
+}
+
+async function unlockExistingApp(page) {
+  await assertVisibleText(page, "#lockUnlockForm", "Otključajte Ročišnik");
+  await page.fill("#lockUnlockPassword", TEST_LOCK_PASSWORD);
+  await page.click('#lockUnlockForm button[type="submit"]');
+  await page.waitForFunction(() => !document.querySelector("#appShell")?.hidden);
+  assert.equal(await page.locator("#lockScreen").isHidden(), true);
 }
 
 async function assertActivePanel(page, selector) {
