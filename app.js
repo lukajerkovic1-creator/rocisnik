@@ -369,16 +369,16 @@
       if (!els.encryptedBackupModal.hidden) closeEncryptedBackupModal();
       if (!els.onboardingModal.hidden) dismissOnboarding();
     });
-    els.exportJsonButton.addEventListener("click", exportJsonBackup);
+    els.exportJsonButton?.addEventListener("click", exportJsonBackup);
     els.exportEncryptedButton.addEventListener("click", openEncryptedExportModal);
-    els.backupReminderExportButton.addEventListener("click", exportJsonBackup);
+    els.backupReminderExportButton.addEventListener("click", openEncryptedExportModal);
     els.backupReminderLaterButton.addEventListener("click", snoozeBackupReminder);
     els.backupReminderTodayButton.addEventListener("click", hideBackupReminderToday);
     els.defaultReminderSelect.addEventListener("change", saveDefaultReminderOption);
     els.enableNotificationsButton.addEventListener("click", requestBrowserNotifications);
     els.remindersList.addEventListener("click", handleReminderAction);
-    els.importJsonButton.addEventListener("click", () => els.importJsonFile.click());
-    els.importJsonFile.addEventListener("change", handleImportFile);
+    els.importJsonButton?.addEventListener("click", () => els.importJsonFile.click());
+    els.importJsonFile?.addEventListener("change", handleImportFile);
     els.jsonExportDownloadButton.addEventListener("click", downloadPendingJsonExport);
     els.jsonExportShareButton.addEventListener("click", sharePendingJsonExportByEmail);
     els.jsonExportDismissButton.addEventListener("click", closeJsonExportModal);
@@ -838,6 +838,7 @@
   }
 
   function renderBackupMetadata() {
+    if (!els.lastJsonExportAt || !els.lastJsonImportAt) return;
     const metadata = getBackupMetadata();
     els.lastJsonExportAt.textContent = formatBackupMetadataDate(metadata.lastJsonExportAt);
     els.lastJsonImportAt.textContent = formatBackupMetadataDate(metadata.lastJsonImportAt);

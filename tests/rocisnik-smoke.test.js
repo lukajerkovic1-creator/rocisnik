@@ -102,8 +102,8 @@ async function run() {
 
     await assertVisibleText(page, "#securityPrompt", "Sigurnosna napomena");
     await assertVisibleText(page, "#securityPrompt", "osjetljivih stvarnih podataka");
-    await assertVisibleText(page, "#lastJsonExportAt", "nikada");
-    await assertVisibleText(page, "#lastJsonImportAt", "nikada");
+    assert.equal(await page.locator("#lastJsonExportAt").count(), 0);
+    assert.equal(await page.locator("#lastJsonImportAt").count(), 0);
 
     await page.click("#securityPromptMoreButton");
     await assertActivePanel(page, "#securityNoticeModal .modal-panel");
@@ -183,7 +183,7 @@ async function run() {
       const heldBadgeBackground = heldBadgeStyle.backgroundColor;
       heldBadgeProbe.remove();
       const dataNoticeClose = document.querySelector("#dismissDataNoticeButton")?.getBoundingClientRect();
-      const importSummary = document.querySelector(".side-column .import-options summary")?.getBoundingClientRect();
+      const importModePanel = document.querySelector(".side-column .backup-import-mode")?.getBoundingClientRect();
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
       const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
@@ -192,7 +192,7 @@ async function run() {
         .split(" ")
         .filter(Boolean).length;
       const reminderIcon = document.querySelector('.search-panel .utility-tab[data-utility-view="reminders"] .utility-tab-icon svg')?.getBoundingClientRect();
-      const backupIconTargets = ["#exportJsonButton", "#importJsonButton", "#exportEncryptedButton"];
+      const backupIconTargets = ["#exportEncryptedButton", "#importEncryptedButton"];
       const backupButtonsHaveIcons = backupIconTargets.every((selector) => {
         const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
         return iconStyle.content === '""' && iconStyle.maskImage !== "none";
@@ -236,7 +236,7 @@ async function run() {
         filterButtonHasIcon: filterIconStyle.content === '""'
           && filterIconStyle.maskImage !== "none",
         backupCloseIsCompact: dataNoticeClose ? dataNoticeClose.width <= 32 && dataNoticeClose.height <= 32 : false,
-        importSummaryIsSubtle: importSummary ? importSummary.height <= 32 : false,
+        importModeIsCompact: importModePanel ? importModePanel.height <= 130 : false,
         searchHeadingHiddenOnDesktop: searchHeading ? searchHeading.height === 0 : false,
         datePresetsCompact: datePreset ? datePreset.height <= 32 : false,
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top <= datePreset.top : false,
@@ -265,7 +265,7 @@ async function run() {
     assert.equal(desktopLayout.heldStatusBadgeIsBlue, true);
     assert.equal(desktopLayout.filterButtonHasIcon, true);
     assert.equal(desktopLayout.backupCloseIsCompact, true);
-    assert.equal(desktopLayout.importSummaryIsSubtle, true);
+    assert.equal(desktopLayout.importModeIsCompact, true);
     assert.equal(desktopLayout.searchHeadingHiddenOnDesktop, true);
     assert.equal(desktopLayout.datePresetsCompact, true);
     assert.equal(desktopLayout.quickAddRemoved, true);
@@ -297,10 +297,12 @@ async function run() {
     assert.equal(await page.locator("#dataNotice").isVisible(), true);
     assert.equal(await page.locator("#dataNotice .data-storage-note").isVisible(), false);
     assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), false);
-    await assertVisibleText(page, "#dataNotice", "Izvezi JSON");
-    await assertVisibleText(page, "#dataNotice", "Uvezi JSON");
-    await assertVisibleText(page, ".side-column .import-options summary", "Dodatne opcije");
-    assert.equal(await page.locator("#importEncryptedButton").isVisible(), false);
+    assert.equal(await page.locator("#exportJsonButton").count(), 0);
+    assert.equal(await page.locator("#importJsonButton").count(), 0);
+    assert.equal(await page.locator(".side-column .import-options").count(), 0);
+    await assertVisibleText(page, "#dataNotice", "Izvezi šifrirani backup");
+    await assertVisibleText(page, "#dataNotice", "Uvezi šifrirani backup");
+    assert.equal(await page.locator("#importEncryptedButton").isVisible(), true);
     await page.click("#dataSafetyButton");
     await assertVisibleText(page, "#dataNotice .data-storage-note", "Podaci se čuvaju samo");
     assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), true);
@@ -775,45 +777,9 @@ async function run() {
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
 
     await page.click("#backupReminderExportButton");
-    await assertVisibleText(page, "#jsonExportModal", "JSON backup je spreman");
-    await assertVisibleText(page, "#jsonExportModal", "JSON backup može sadržavati osjetljive podatke.");
-    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY));
-    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_JSON_EXPORT_AT_KEY));
-    await assertVisibleText(page, "#lastJsonExportAt", ".");
-    await assertVisibleText(page, "#lastJsonImportAt", "nikada");
-    assert.equal(await page.locator("#backupReminder").isHidden(), true);
-
-    const downloadPromise = page.waitForEvent("download");
-    await page.click("#jsonExportDownloadButton");
-    const download = await downloadPromise;
-    assert.match(download.suggestedFilename(), /^rocisnik-backup-\d{4}-\d{2}-\d{2}\.json$/);
-    const backupPath = await download.path();
-    const exportedBackup = JSON.parse(await fs.readFile(backupPath, "utf8"));
-    assert.ok(exportedBackup.hearings[0].history.some((event) => event.eventType === "created"));
-    assert.ok(exportedBackup.hearings[0].history.some((event) => event.eventType === "restored"));
-
-    await page.evaluate(() => {
-      window.__sharedJsonBackup = null;
-      Object.defineProperty(navigator, "canShare", { configurable: true, value: () => true });
-      Object.defineProperty(navigator, "share", {
-        configurable: true,
-        value: async (payload) => {
-          window.__sharedJsonBackup = {
-            title: payload.title,
-            text: payload.text,
-            fileName: payload.files?.[0]?.name || "",
-            fileType: payload.files?.[0]?.type || ""
-          };
-        }
-      });
-    });
-    await page.click("#jsonExportShareButton");
-    const sharedBackup = await page.waitForFunction(() => window.__sharedJsonBackup).then((handle) => handle.jsonValue());
-    assert.equal(sharedBackup.title, "Ročišnik JSON backup");
-    assert.equal(sharedBackup.text, "U privitku je JSON sigurnosna kopija ročišnika.");
-    assert.match(sharedBackup.fileName, /^rocisnik-backup-\d{4}-\d{2}-\d{2}\.json$/);
-    assert.equal(sharedBackup.fileType, "application/json");
-    await page.click("#jsonExportDismissButton");
+    await assertVisibleText(page, "#encryptedBackupModal", "Izvezi šifrirani backup");
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), LAST_BACKUP_AT_KEY), null);
+    await page.click("#encryptedBackupCancelButton");
 
     await page.evaluate((key) => localStorage.removeItem(key), LAST_BACKUP_AT_KEY);
     await page.click("#exportEncryptedButton");
@@ -852,7 +818,6 @@ async function run() {
     const storageAfterEncryptedExport = await page.evaluate(() => Object.values(localStorage).join(" "));
     assert.equal(storageAfterEncryptedExport.includes("SigurnaLozinka123!"), false);
 
-    await page.click(".import-options summary");
     const recordsBeforeWrongPassword = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
     await page.check('input[name="importMode"][value="replace"]');
     await page.setInputFiles("#importEncryptedFile", encryptedBackupPath);
@@ -873,48 +838,6 @@ async function run() {
     const storageAfterEncryptedImport = await page.evaluate(() => Object.values(localStorage).join(" "));
     assert.equal(storageAfterEncryptedImport.includes("SigurnaLozinka123!"), false);
     await page.check('input[name="importMode"][value="append"]');
-
-    const importDir = await fs.mkdtemp(path.join(os.tmpdir(), "rocisnik-import-"));
-    const importRecord = buildStoredHearing("import-history-record", addDays(today, 3), "Import Povijest", "Test Osoba");
-    importRecord.history = [{
-      eventId: "existing-import-history",
-      eventType: "created",
-      timestamp: new Date().toISOString(),
-      actor: "local-user",
-      changedFields: ["plaintiff"],
-      previousValues: {},
-      newValues: { plaintiff: "Import Povijest" },
-      note: "Postojeća povijest"
-    }];
-    const importPath = path.join(importDir, "rocisnik-import-history.json");
-    const invalidImportPath = path.join(importDir, "rocisnik-invalid.json");
-    await fs.writeFile(invalidImportPath, JSON.stringify({ formatVersion: 1, hearings: [{ id: "broken" }] }), "utf8");
-    await fs.writeFile(importPath, JSON.stringify({
-      formatVersion: 1,
-      exportedAt: new Date().toISOString(),
-      metadata: { appName: "Ročišnik", storageKey: STORAGE_KEY },
-      hearings: [importRecord]
-    }), "utf8");
-    await page.evaluate((key) => localStorage.removeItem(key), LAST_JSON_IMPORT_AT_KEY);
-    await page.setInputFiles("#importJsonFile", invalidImportPath);
-    await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("nije ispravno"));
-    await assertVisibleText(page, "#backupMessage", "nije ispravno");
-    assert.equal(await page.evaluate((key) => localStorage.getItem(key), LAST_JSON_IMPORT_AT_KEY), null);
-
-    await page.setInputFiles("#importJsonFile", importPath);
-    await page.waitForFunction((key) => {
-      const hearings = JSON.parse(localStorage.getItem(key) || "[]");
-      return hearings.some((hearing) => hearing.id === "import-history-record");
-    }, STORAGE_KEY);
-    await assertVisibleText(page, "#backupMessage", "Uvoz je dovršen.");
-    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
-    const imported = hearings.find((hearing) => hearing.id === "import-history-record");
-    assert.ok(imported, "Imported hearing should be saved");
-    assert.ok(imported.history.some((event) => event.eventId === "existing-import-history"));
-    assert.ok(imported.history.some((event) => event.eventType === "imported"));
-    assert.ok(await page.evaluate((key) => localStorage.getItem(key), LAST_JSON_IMPORT_AT_KEY));
-    await assertVisibleText(page, "#lastJsonImportAt", ".");
-    await fs.rm(importDir, { recursive: true, force: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });

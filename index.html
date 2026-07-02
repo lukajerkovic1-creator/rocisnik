@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=84">
+    <link rel="stylesheet" href="styles.css?v=85">
   </head>
   <body>
     <div class="app-shell">
@@ -540,43 +540,26 @@
 
         <section class="data-notice" id="dataNotice" aria-labelledby="dataNoticeTitle">
           <div class="data-notice-body">
-            <h2 id="dataNoticeTitle">Sigurnosna kopija i podaci</h2>
-            <p class="data-storage-note">Podaci se čuvaju samo u ovom pregledniku. Redovito napravite izvoz/sigurnosnu kopiju.</p>
-            <div class="backup-metadata" id="backupMetadata" aria-live="polite">
-              <div>
-                <span>Zadnji izvoz JSON-a</span>
-                <strong id="lastJsonExportAt">nikada</strong>
-              </div>
-              <div>
-                <span>Zadnji uvoz JSON-a</span>
-                <strong id="lastJsonImportAt">nikada</strong>
-              </div>
-            </div>
+            <h2 id="dataNoticeTitle">Sigurnosna kopija</h2>
+            <p class="data-storage-note">Podaci se čuvaju samo u ovom pregledniku. Za sigurnosnu kopiju koristite šifrirani backup.</p>
             <div class="backup-tools" aria-label="Izvoz i uvoz podataka">
-              <button class="secondary-button compact-button" type="button" id="exportJsonButton">Izvezi JSON</button>
-              <button class="secondary-button compact-button" type="button" id="importJsonButton">Uvezi JSON</button>
               <button class="primary-button compact-button" type="button" id="exportEncryptedButton">Izvezi šifrirani backup</button>
-              <details class="import-options">
-                <summary>Dodatne opcije</summary>
-                <div class="import-controls">
-                  <fieldset class="import-mode" aria-label="Način uvoza">
-                    <legend>Način uvoza</legend>
-                    <label>
-                      <input type="radio" name="importMode" value="append" checked>
-                      <span>Dodaj u postojeće podatke</span>
-                    </label>
-                    <label>
-                      <input type="radio" name="importMode" value="replace">
-                      <span>Zamijeni postojeće podatke</span>
-                    </label>
-                  </fieldset>
-                  <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
-                </div>
-              </details>
+              <button class="secondary-button compact-button" type="button" id="importEncryptedButton">Uvezi šifrirani backup</button>
+              <fieldset class="import-mode backup-import-mode" aria-label="Način uvoza">
+                <legend>Način uvoza</legend>
+                <label>
+                  <input type="radio" name="importMode" value="append" checked>
+                  <span>Dodaj u postojeće podatke</span>
+                </label>
+                <label>
+                  <input type="radio" name="importMode" value="replace">
+                  <span>Zamijeni postojeće podatke</span>
+                </label>
+              </fieldset>
               <input id="importJsonFile" type="file" accept="application/json,.json" hidden>
               <input id="importEncryptedFile" type="file" accept="application/json,.json" hidden>
             </div>
-            <p class="backup-note">JSON backup može sadržavati osjetljive podatke. Šifrirani backup je sigurnija opcija.</p>
+            <p class="backup-note">Lozinku nije moguće vratiti ako je zaboravite. Bez lozinke nije moguće otvoriti šifrirani backup.</p>
             <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
           </div>
           <button class="notice-close" type="button" id="dismissDataNoticeButton" aria-label="Zatvori upozorenje">Zatvori</button>
@@ -673,6 +656,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=84"></script>
+    <script src="app.js?v=85"></script>
   </body>
 </html>
