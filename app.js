@@ -133,6 +133,7 @@
       caseNumber: "",
       subject: "",
       value: "",
+      valueRange: "",
       other: "",
       status: "",
       dateFrom: "",
@@ -239,6 +240,7 @@
       caseNumber: document.getElementById("filterCaseNumber"),
       subject: document.getElementById("filterSubject"),
       value: document.getElementById("filterValue"),
+      valueRange: document.getElementById("filterValueRange"),
       other: document.getElementById("filterOther"),
       status: document.getElementById("filterStatus"),
       dateFrom: document.getElementById("filterDateFrom"),
@@ -428,6 +430,10 @@
       tab.addEventListener("click", () => {
         if (tab.dataset.mobileView === "form") {
           goToNewHearingForm();
+          return;
+        }
+        if (tab.dataset.mobileView === "search") {
+          openUtilityView("search");
           return;
         }
         setMobileView(tab.dataset.mobileView);
@@ -2756,6 +2762,7 @@
     const filters = state.filters;
     if (filters.status && normalizeStatus(hearing.status) !== filters.status) return false;
     if (!matchesDateRange(hearing, filters)) return false;
+    if (!matchesValueRange(hearing.disputeValue, filters.valueRange)) return false;
 
     const checks = [
       [filters.plaintiff, hearing.plaintiff],
@@ -2795,6 +2802,10 @@
       }
       if (key === "dateFrom" || key === "dateTo") {
         state.filters[key] = input.value.trim();
+        return;
+      }
+      if (key === "valueRange") {
+        state.filters[key] = input.value;
         return;
       }
       state.filters[key] = normalizeSearch(input.value);
@@ -2864,6 +2875,26 @@
     if (from && hearingDate < from) return false;
     if (to && hearingDate > endOfDay(to)) return false;
     return true;
+  }
+
+  function matchesValueRange(value, range) {
+    if (!range) return true;
+    const amount = parseMoneyValue(value);
+    if (amount === null) return false;
+    if (range === "lte5000") return amount <= 5000;
+    if (range === "gt5000") return amount > 5000;
+    return true;
+  }
+
+  function parseMoneyValue(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return null;
+    const numericText = raw
+      .replace(/[^\d,.-]/g, "")
+      .replace(/\.(?=\d{3}(\D|$))/g, "")
+      .replace(",", ".");
+    const amount = Number.parseFloat(numericText);
+    return Number.isFinite(amount) ? amount : null;
   }
 
   function jumpToSelectedMonth() {

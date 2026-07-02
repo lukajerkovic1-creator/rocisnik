@@ -56,6 +56,29 @@ button {
   border: 0;
   border-radius: var(--radius);
   cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled),
+button[aria-pressed="true"]:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled,
+button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
 }
 
 button:focus-visible,
@@ -1511,6 +1534,7 @@ select.invalid {
 
 .primary-button:hover {
   background: var(--accent-strong);
+  box-shadow: 0 10px 24px rgba(15, 107, 99, 0.16);
 }
 
 .secondary-button,
@@ -1522,6 +1546,33 @@ select.invalid {
 .danger-button {
   color: var(--danger);
   background: var(--danger-soft);
+}
+
+.secondary-button:hover,
+.ghost-button:hover {
+  background: #d8ece8;
+  box-shadow: 0 8px 18px rgba(15, 107, 99, 0.08);
+}
+
+.danger-button:hover {
+  background: #ffe3e0;
+  box-shadow: 0 8px 18px rgba(181, 59, 59, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  button:hover:not(:disabled),
+  button:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .schedule-heading {
@@ -2842,6 +2893,39 @@ select.invalid {
 
   .search-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+  .workspace {
+    display: block;
+  }
+
+  .side-column {
+    display: block;
+    position: static;
+  }
+
+  .side-column .details-panel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .mobile-view {
+    display: none;
+  }
+
+  .mobile-view.active {
+    display: block;
+  }
+
+  .entry-panel,
+  .search-panel,
+  .details-panel,
+  .two-week-panel,
+  .schedule-panel,
+  .workspace .data-notice {
+    box-shadow: none;
   }
 }
 

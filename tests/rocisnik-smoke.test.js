@@ -130,6 +130,7 @@ async function run() {
     await assertVisibleText(page, ".search-panel .utility-tabs", "Podsjetnici");
     await assertVisibleText(page, ".search-grid", "Broj predmeta");
     await assertVisibleText(page, ".search-grid", "Predmet spora");
+    await assertVisibleText(page, ".search-grid", "Raspon vrijednosti");
     await assertVisibleText(page, ".search-grid", "Prikaži obrisane");
     const desktopLayout = await page.evaluate(() => {
       const utilityTabs = document.querySelector(".search-panel .utility-tabs")?.getBoundingClientRect();
@@ -320,6 +321,11 @@ async function run() {
 
     await page.click(".schedule-empty button");
     await assertNewHearingFormReady(page);
+    await page.click('.mobile-tab[data-mobile-view="search"]');
+    assert.equal(await page.locator(".search-panel").evaluate((panel) => panel.classList.contains("utility-active")), true);
+    assert.equal(await page.locator("#filterPlaintiff").isVisible(), true);
+    await page.click('.search-panel [data-utility-view="form"]');
+    await assertNewHearingFormReady(page);
     await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
 
     assert.equal(await page.locator(".reminders-panel").isVisible(), false);
@@ -331,6 +337,7 @@ async function run() {
     assert.equal(await page.locator("#reminder2h").isChecked(), true);
     assert.equal(await page.locator("#reminder1d").isChecked(), false);
     await page.click('.search-panel [data-utility-view="form"]');
+    await assertNewHearingFormReady(page);
 
     await fillRequiredHearing(page);
     await page.check("#reminderCustomEnabled");
@@ -425,6 +432,14 @@ async function run() {
       buildStoredHearing("date-filter-forty-days", fortyDaysFromToday, "Datum Cetrdeset", "Test Osoba"),
       buildStoredHearing("date-filter-canceled", tomorrow, "Datum Otkazano", "Test Osoba", "otkazano"),
       buildStoredHearing("date-filter-postponed", tomorrow, "Datum Odgodeno", "Test Osoba", postponedStatusValue),
+      {
+        ...buildStoredHearing("value-low", tomorrow, "Vrijednost Niska", "Test Osoba"),
+        disputeValue: "4.500 EUR"
+      },
+      {
+        ...buildStoredHearing("value-high", tomorrow, "Vrijednost Visoka", "Test Osoba"),
+        disputeValue: "7.500 EUR"
+      },
       {
         ...buildStoredHearing("two-week-early", today, "Dva Tjedna Rano", "Test Osoba"),
         hearingDateTime: toDateTimeInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 15))
@@ -632,6 +647,18 @@ async function run() {
     await assertSearchIncludes(page, "Datum Obrisano");
     await page.selectOption("#filterDeleted", "no");
     assert.equal(await page.locator("#showDeletedToggle").isChecked(), false);
+
+    await page.click("#clearFiltersButton");
+    await page.selectOption("#filterValueRange", "lte5000");
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Vrijednost Niska");
+    await assertSearchExcludes(page, "Vrijednost Visoka");
+
+    await page.click("#clearFiltersButton");
+    await page.selectOption("#filterValueRange", "gt5000");
+    await page.click("#searchButton");
+    await assertSearchIncludes(page, "Vrijednost Visoka");
+    await assertSearchExcludes(page, "Vrijednost Niska");
 
     await page.click("#clearFiltersButton");
     await page.fill("#filterPlaintiff", "Ne postoji");
@@ -889,6 +916,7 @@ async function run() {
     assert.equal(await page.locator(".search-panel").isVisible(), true);
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
     assert.equal(await page.locator("#filterCaseNumber").isVisible(), true);
+    assert.equal(await page.locator("#filterValueRange").isVisible(), true);
     assert.equal(await page.locator("#filterDeleted").isVisible(), true);
     assert.equal(await page.locator("#filterDateFrom").isVisible(), true);
     assert.equal(await page.locator('[data-date-preset="next-30"]').isVisible(), true);
