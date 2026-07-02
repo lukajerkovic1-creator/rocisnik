@@ -331,6 +331,7 @@
   init();
 
   function init() {
+    normalizePublicUrl();
     registerServiceWorker();
     state.hearings = loadHearings();
     if (state.hearings.length) saveHearings();
@@ -474,6 +475,16 @@
     checkDueReminders();
     if (!hasCompletedOnboarding()) openOnboardingModal();
     window.setInterval(checkDueReminders, REMINDER_CHECK_INTERVAL_MS);
+  }
+
+  function normalizePublicUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("v")) return;
+
+    params.delete("v");
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, document.title, nextUrl);
   }
 
   function syncDataNotice() {

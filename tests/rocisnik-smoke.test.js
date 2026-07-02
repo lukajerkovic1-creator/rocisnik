@@ -51,7 +51,7 @@ async function startStaticServer() {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   return {
-    url: `http://127.0.0.1:${port}/?qa=smoke-regression`,
+    url: `http://127.0.0.1:${port}/?qa=smoke-regression&v=temporary-link`,
     close: () => new Promise((resolve) => server.close(resolve))
   };
 }
@@ -83,6 +83,9 @@ async function run() {
 
   try {
     await page.goto(app.url, { waitUntil: "domcontentloaded" });
+    const normalizedUrl = new URL(page.url());
+    assert.equal(normalizedUrl.searchParams.has("v"), false);
+    assert.equal(normalizedUrl.searchParams.get("qa"), "smoke-regression");
 
     assert.equal(await page.title(), "Ročišnik");
     await assertVisibleText(page, "h1", "Ročišnik");
