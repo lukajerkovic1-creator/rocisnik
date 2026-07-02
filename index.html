@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=81">
+    <link rel="stylesheet" href="styles.css?v=82">
   </head>
   <body>
     <div class="app-shell">
@@ -106,7 +106,6 @@
         <button class="mobile-tab" type="button" data-mobile-view="twoWeek">Ovaj i sljedeći tjedan</button>
         <button class="mobile-tab active" type="button" data-mobile-view="schedule">Raspored</button>
         <button class="mobile-tab" type="button" data-mobile-view="search">Pretraži</button>
-        <button class="mobile-tab" type="button" data-mobile-view="form">Novo ročište</button>
         <button class="mobile-tab" type="button" data-mobile-view="details">Detalji</button>
       </nav>
 
@@ -173,7 +172,6 @@
         <section class="entry-panel mobile-view utility-view" data-view="form" aria-labelledby="formTitle">
           <div class="utility-tabs" aria-label="Radni paneli">
             <button class="utility-tab" type="button" data-utility-view="search">Pretraživanje</button>
-            <button class="utility-tab active" type="button" data-utility-view="form">Novo ročište</button>
             <button class="utility-tab" type="button" data-utility-view="reminders">
               <span class="utility-tab-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
@@ -348,11 +346,6 @@
           </div>
 
           <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
-          <button class="quick-add-button" type="button" id="quickAddButton">
-            <span aria-hidden="true">+</span>
-            <strong>Dodaj novo ročište</strong>
-            <small>Kliknite za brzo dodavanje</small>
-          </button>
           <div class="load-more-wrap">
             <button class="secondary-button" type="button" id="loadMoreButton">Učitaj još 6 mjeseci</button>
           </div>
@@ -361,7 +354,6 @@
         <section class="search-panel mobile-view" data-view="search" aria-labelledby="searchTitle">
           <div class="utility-tabs" aria-label="Radni paneli">
             <button class="utility-tab active" type="button" data-utility-view="search">Pretraživanje</button>
-            <button class="utility-tab" type="button" data-utility-view="form">Novo ročište</button>
             <button class="utility-tab" type="button" data-utility-view="reminders">
               <span class="utility-tab-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
@@ -682,6 +674,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=81"></script>
+    <script src="app.js?v=82"></script>
   </body>
 </html>

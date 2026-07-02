@@ -67,7 +67,7 @@
     today: {
       label: "Danas",
       emptyTitle: "Nema ročišta danas.",
-      emptyText: "Dodaj novo ročište ili odaberi širi vremenski pregled."
+      emptyText: "Za novi unos koristite gornji gumb Novo ročište ili odaberite širi vremenski pregled."
     },
     week: {
       label: "Ovaj tjedan",
@@ -403,7 +403,7 @@
     });
     els.cancelEditButton.addEventListener("click", resetForm);
     els.clearSelectionButton.addEventListener("click", goToNewHearingForm);
-    els.quickAddButton.addEventListener("click", goToNewHearingForm);
+    els.quickAddButton?.addEventListener("click", goToNewHearingForm);
     els.editButton.addEventListener("click", startEditSelected);
     els.deleteButton.addEventListener("click", deleteSelected);
     els.restoreButton.addEventListener("click", restoreSelected);
@@ -2007,13 +2007,8 @@
     empty.className = "two-week-empty";
     empty.append(
       createEmptyTitle("Nema rasprava ovaj i sljedeći tjedan."),
-      createEmptyText("Dodajte novo ročište ili otvorite širi raspored za druge datume.")
+      createEmptyText("Za novi unos koristite gornji gumb Novo ročište.")
     );
-
-    const actions = document.createElement("div");
-    actions.className = "empty-actions";
-    actions.append(createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearingForm }));
-    empty.append(actions);
     return empty;
   }
 
@@ -2116,10 +2111,12 @@
     const emptyConfig = getScheduleEmptyConfig(viewConfig);
     empty.append(createEmptyTitle(emptyConfig.title), createEmptyText(emptyConfig.text));
 
-    const actions = document.createElement("div");
-    actions.className = "empty-actions";
-    emptyConfig.actions.forEach((action) => actions.append(createEmptyActionButton(action)));
-    empty.append(actions);
+    if (emptyConfig.actions.length > 0) {
+      const actions = document.createElement("div");
+      actions.className = "empty-actions";
+      emptyConfig.actions.forEach((action) => actions.append(createEmptyActionButton(action)));
+      empty.append(actions);
+    }
     return empty;
   }
 
@@ -2127,8 +2124,8 @@
     if (state.hearings.length === 0) {
       return {
         title: "Još nema unesenih ročišta.",
-        text: "Dodajte prvo ročište kako biste počeli voditi osobni raspored.",
-        actions: [{ label: "Dodaj prvo ročište", variant: "primary", action: goToNewHearingForm }]
+        text: "Za prvi unos koristite gornji gumb Novo ročište.",
+        actions: []
       };
     }
 
@@ -2143,7 +2140,7 @@
     return {
       title: viewConfig.emptyTitle,
       text: viewConfig.emptyText,
-      actions: [{ label: "Dodaj novo ročište", variant: "secondary", action: goToNewHearingForm }]
+      actions: []
     };
   }
 
@@ -2379,13 +2376,12 @@
 
     empty.append(
       createEmptyTitle("Nema rezultata za zadane kriterije."),
-      createEmptyText("Promijenite kriterije pretrage ili dodajte novo ročište.")
+      createEmptyText("Promijenite kriterije pretrage ili za novi unos koristite gornji gumb Novo ročište.")
     );
     const actions = document.createElement("div");
     actions.className = "empty-actions";
     actions.append(
-      createEmptyActionButton({ label: "Očisti filtre", variant: "secondary", action: clearFilters }),
-      createEmptyActionButton({ label: "Dodaj novo ročište", variant: "primary", action: goToNewHearingForm })
+      createEmptyActionButton({ label: "Očisti filtre", variant: "secondary", action: clearFilters })
     );
     empty.append(actions);
     return empty;

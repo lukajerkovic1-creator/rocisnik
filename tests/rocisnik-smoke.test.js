@@ -126,11 +126,10 @@ async function run() {
     await assertVisibleText(page, "#summaryActiveCount", "0");
     await assertVisibleText(page, "#summaryActiveMeta", "zakazano");
     await assertVisibleText(page, ".schedule-empty", "Još nema unesenih ročišta.");
-    await assertVisibleText(page, ".schedule-empty", "Dodajte prvo ročište kako biste počeli voditi osobni raspored.");
-    await assertVisibleText(page, ".schedule-empty", "Dodaj prvo ročište");
+    await assertVisibleText(page, ".schedule-empty", "Za prvi unos koristite gornji gumb Novo ročište.");
     await assertVisibleText(page, ".search-panel .utility-tabs", "Pretraživanje");
-    await assertVisibleText(page, ".search-panel .utility-tabs", "Novo ročište");
     await assertVisibleText(page, ".search-panel .utility-tabs", "Podsjetnici");
+    await assertSingleNewHearingButton(page);
     await assertVisibleText(page, ".search-grid", "Broj predmeta");
     await assertVisibleText(page, ".search-grid", "Predmet spora");
     await assertVisibleText(page, ".search-grid", "Raspon vrijednosti");
@@ -178,7 +177,7 @@ async function run() {
       const searchHeading = document.querySelector(".search-panel > .panel-heading")?.getBoundingClientRect();
       const datePreset = document.querySelector(".date-presets .compact-button")?.getBoundingClientRect();
       const searchActions = document.querySelector(".search-actions")?.getBoundingClientRect();
-      const quickAdd = document.querySelector(".quick-add-button")?.getBoundingClientRect();
+      const quickAdd = document.querySelector(".quick-add-button");
       const searchGridColumns = getComputedStyle(document.querySelector(".search-grid")).gridTemplateColumns
         .split(" ")
         .filter(Boolean).length;
@@ -228,7 +227,7 @@ async function run() {
         searchActionsBeforePresets: searchActions && datePreset ? searchActions.top < datePreset.top : false,
         searchActionsInFirstViewport: searchActions ? searchActions.bottom < window.innerHeight : false,
         searchGridHasWideDesktopColumns: searchGridColumns === 5,
-        quickAddCompact: quickAdd ? quickAdd.height <= 36 : false,
+        quickAddRemoved: quickAdd === null,
         reminderTabHasSvgIcon: reminderIcon ? reminderIcon.width === 16 && reminderIcon.height === 16 : false,
         backupButtonsHaveIcons
       };
@@ -257,7 +256,7 @@ async function run() {
     assert.equal(desktopLayout.searchActionsBeforePresets, true);
     assert.equal(desktopLayout.searchActionsInFirstViewport, true);
     assert.equal(desktopLayout.searchGridHasWideDesktopColumns, true);
-    assert.equal(desktopLayout.quickAddCompact, true);
+    assert.equal(desktopLayout.quickAddRemoved, true);
     assert.equal(desktopLayout.reminderTabHasSvgIcon, true);
     assert.equal(desktopLayout.backupButtonsHaveIcons, true);
 
@@ -323,13 +322,13 @@ async function run() {
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    await page.click(".schedule-empty button");
+    await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
     await page.click('.mobile-tab[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").evaluate((panel) => panel.classList.contains("utility-active")), true);
     assert.equal(await page.locator("#filterPlaintiff").isVisible(), true);
     await assertActivePanel(page, ".search-panel");
-    await page.click('.search-panel [data-utility-view="form"]');
+    await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
     await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
     await assertActivePanel(page, ".schedule-panel");
@@ -343,7 +342,7 @@ async function run() {
     await page.selectOption("#defaultReminderSelect", "2h");
     assert.equal(await page.locator("#reminder2h").isChecked(), true);
     assert.equal(await page.locator("#reminder1d").isChecked(), false);
-    await page.click('.search-panel [data-utility-view="form"]');
+    await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
 
     await fillRequiredHearing(page);
@@ -354,7 +353,8 @@ async function run() {
     await page.click("#submitButton");
     await assertVisibleText(page, "#formMessage", "Ročište je dodano.");
     await assertVisibleText(page, "#summaryActiveCount", "1");
-    await assertVisibleText(page, "#quickAddButton", "Dodaj novo ročište");
+    assert.equal(await page.locator("#quickAddButton").count(), 0);
+    await assertSingleNewHearingButton(page);
     assert.equal(await page.locator(".hearing-button .row-more").count(), 1);
     assert.equal(await page.locator(".hearing-reminder-indicator").count(), 1);
     assert.equal(await page.locator(".hearing-reminder-indicator").first().evaluate((element) => {
@@ -387,7 +387,7 @@ async function run() {
       const height = element.getBoundingClientRect().height;
       return height >= 50 && height <= 64;
     }), true);
-    await page.click("#quickAddButton");
+    await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
 
     let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
@@ -684,7 +684,7 @@ async function run() {
     await page.click("#searchButton");
     await assertVisibleText(page, ".search-empty", "Nema rezultata za zadane kriterije.");
     await assertVisibleText(page, ".search-empty", "Očisti filtre");
-    await assertVisibleText(page, ".search-empty", "Dodaj novo ročište");
+    await assertVisibleText(page, ".search-empty", "gornji gumb Novo ročište");
     await page.locator(".search-empty button").filter({ hasText: "Očisti filtre" }).click();
     await assertVisibleText(page, ".search-empty", "Upiši kriterij i pritisni Pretraži.");
 
@@ -1041,6 +1041,16 @@ async function assertActivePanel(page, selector) {
   }, selector);
   const activeCount = await page.locator(".is-active-panel").count();
   assert.equal(activeCount, 1);
+}
+
+async function assertSingleNewHearingButton(page) {
+  const newButtons = await page.evaluate(() => Array.from(document.querySelectorAll("button"))
+    .filter((button) => button.innerText.trim() === "Novo ročište")
+    .map((button) => ({
+      id: button.id,
+      visible: button.getBoundingClientRect().width > 0 && button.getBoundingClientRect().height > 0
+    })));
+  assert.deepEqual(newButtons, [{ id: "clearSelectionButton", visible: true }]);
 }
 
 async function assertOpaqueModalPanel(page, selector) {
