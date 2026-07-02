@@ -8,6 +8,7 @@ const { chromium } = require("playwright");
 
 const ROOT = path.resolve(__dirname, "..");
 const STORAGE_KEY = "rocisnik.hearings.v1";
+const ENCRYPTED_DATABASE_KEY = "rocisnik.encryptedDatabase.v2";
 const LAST_BACKUP_AT_KEY = "rocisnik.lastBackupAt.v1";
 const LAST_JSON_EXPORT_AT_KEY = "rocisnik.lastJsonExportAt";
 const LAST_JSON_IMPORT_AT_KEY = "rocisnik.lastJsonImportAt";
@@ -114,6 +115,13 @@ async function run() {
     assert.ok(lockVerifier.iv);
     assert.ok(lockVerifier.ciphertext);
     assert.equal(JSON.stringify(lockVerifier).includes(TEST_LOCK_PASSWORD), false);
+    const initialEncryptedDb = await getEncryptedDatabase(page);
+    assert.equal(initialEncryptedDb.type, "rocisnik-encrypted-database");
+    assert.equal(initialEncryptedDb.encrypted, true);
+    assert.ok(initialEncryptedDb.cipher.iv);
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY), null);
+    await testLegacyPlaintextMigration(app, browser);
+    await testFailedLegacyPlaintextMigration(app, browser);
     await assertVisibleText(page, "#onboardingModal", "Kako koristiti Ročišnik");
     await assertVisibleText(page, "#onboardingModal", "Redovito izvozite sigurnosnu kopiju");
     await page.click("#onboardingFinishButton");
@@ -351,7 +359,7 @@ async function run() {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
       deletedAt: new Date().toISOString()
     };
-    await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: onlyDeleted });
+    await replaceHearings(page, [onlyDeleted]);
     await page.reload({ waitUntil: "domcontentloaded" });
     await unlockExistingApp(page);
     await assertVisibleText(page, ".schedule-empty", "Sva ročišta su obrisana.");
@@ -361,7 +369,7 @@ async function run() {
     await assertScheduleIncludes(page, "Obrisano Samo");
 
     const futureOnly = buildStoredHearing("future-only-record", addDays(startOfDay(new Date()), 45), "Daleki Termin", "Test Osoba");
-    await page.evaluate(({ key, record }) => localStorage.setItem(key, JSON.stringify([record])), { key: STORAGE_KEY, record: futureOnly });
+    await replaceHearings(page, [futureOnly]);
     await page.reload({ waitUntil: "domcontentloaded" });
     await unlockExistingApp(page);
     await page.click('.schedule-view-tabs [data-schedule-view="today"]');
@@ -373,7 +381,7 @@ async function run() {
     await page.click('.schedule-view-tabs [data-schedule-view="all"]');
     await assertScheduleIncludes(page, "Daleki Termin");
 
-    await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+    await replaceHearings(page, []);
     await page.reload({ waitUntil: "domcontentloaded" });
     await unlockExistingApp(page);
 
@@ -446,13 +454,19 @@ async function run() {
     await page.click("#clearSelectionButton");
     await assertNewHearingFormReady(page);
 
-    let hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    let hearings = await getHearings(page);
     assert.equal(hearings.length, 1);
     assert.equal(hearings[0].status, "zakazano");
     assert.equal(hearings[0].history.length, 1);
     assert.equal(hearings[0].history[0].eventType, "created");
     assert.ok(hearings[0].history[0].eventId);
     assert.deepEqual(hearings[0].reminders.map((reminder) => reminder.minutesBefore).sort((a, b) => a - b), [30, 120]);
+    const encryptedAfterCreate = await getEncryptedDatabase(page);
+    const storageDumpAfterCreate = await getStorageDump(page);
+    assert.equal(JSON.stringify(encryptedAfterCreate).includes("Croatia osiguranje"), false);
+    assert.equal(storageDumpAfterCreate.includes("Croatia osiguranje"), false);
+    assert.equal(storageDumpAfterCreate.includes("Marko Markovic"), false);
+    assert.equal(storageDumpAfterCreate.includes("P-123/2026"), false);
     assert.equal(await page.locator("#backupReminder").isVisible(), true);
     const backupReminderChrome = await page.locator("#backupReminder").evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -480,7 +494,7 @@ async function run() {
 
     await page.click('[data-reminder-action="seen"]');
     await assertVisibleText(page, "#remindersList", "Nema dospjelih podsjetnika.");
-    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    hearings = await getHearings(page);
     assert.ok(Object.values(hearings[0].reminderEvents || {}).some((event) => event.dismissedAt));
 
     const today = startOfDay(new Date());
@@ -535,10 +549,7 @@ async function run() {
         deletedAt: new Date().toISOString()
       }
     ];
-    await page.evaluate(({ key, records }) => {
-      const existing = JSON.parse(localStorage.getItem(key) || "[]");
-      localStorage.setItem(key, JSON.stringify([...existing, ...records]));
-    }, { key: STORAGE_KEY, records: seededHearings });
+    await appendHearings(page, seededHearings);
     await page.reload({ waitUntil: "domcontentloaded" });
     await unlockExistingApp(page);
     await assertVisibleText(page, ".mobile-tabs", "Raspored");
@@ -809,11 +820,15 @@ async function run() {
     await page.locator(".search-result-button", { hasText: "Croatia osiguranje" }).click();
     await page.click("#editButton");
     await page.selectOption("#hearingStatus", "otkazano");
+    const encryptedBeforeStatusChange = await getEncryptedDatabase(page);
     await page.click("#submitButton");
-    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    await assertVisibleText(page, "#detailsHeaderStatus", "OTKAZANO");
+    hearings = await getHearings(page);
     assert.equal(hearings[0].status, "otkazano");
     assert.ok(hearings[0].history.some((event) => event.eventType === "status-changed" && event.changedFields.includes("status")));
-    await assertVisibleText(page, "#detailsHeaderStatus", "OTKAZANO");
+    const encryptedAfterStatusChange = await getEncryptedDatabase(page);
+    assert.notEqual(encryptedAfterStatusChange.cipher.iv, encryptedBeforeStatusChange.cipher.iv);
+    assert.notEqual(encryptedAfterStatusChange.ciphertext, encryptedBeforeStatusChange.ciphertext);
     await openHistoryPanel(page);
     await assertVisibleText(page, "#detailsHistory", "Status promijenjen");
     await page.click('.search-panel [data-utility-view="reminders"]');
@@ -824,7 +839,7 @@ async function run() {
     await assertVisibleText(page, ".search-results-heading", "1 pronađena rasprava");
 
     await page.click("#deleteButton");
-    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    hearings = await getHearings(page);
     assert.ok(hearings[0].deletedAt, "Soft-delete should keep a deletedAt timestamp");
     assert.ok(hearings[0].history.some((event) => event.eventType === "deleted"));
     assert.equal(await page.locator("#detailsContent").isHidden(), true);
@@ -836,7 +851,7 @@ async function run() {
     await openHistoryPanel(page);
     await assertVisibleText(page, "#detailsHistory", "Zapis obrisan");
     await page.click("#restoreButton");
-    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    hearings = await getHearings(page);
     assert.equal(Boolean(hearings[0].deletedAt), false);
     assert.ok(hearings[0].history.some((event) => event.eventType === "restored"));
 
@@ -902,7 +917,7 @@ async function run() {
     const storageAfterEncryptedExport = await page.evaluate(() => Object.values(localStorage).join(" "));
     assert.equal(storageAfterEncryptedExport.includes("SigurnaLozinka123!"), false);
 
-    const recordsBeforeWrongPassword = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    const recordsBeforeWrongPassword = await getEncryptedDatabase(page);
     await page.check('input[name="importMode"][value="replace"]');
     await page.setInputFiles("#importEncryptedFile", encryptedBackupPath);
     await assertVisibleText(page, "#encryptedBackupModal", "Uvezi šifrirani backup");
@@ -910,13 +925,13 @@ async function run() {
     await page.click("#encryptedBackupConfirmButton");
     await page.waitForFunction(() => document.querySelector("#encryptedBackupMessage")?.textContent.includes("Lozinka nije ispravna"));
     await assertVisibleText(page, "#encryptedBackupMessage", "Lozinka nije ispravna ili datoteka nije valjan šifrirani backup.");
-    assert.equal(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY), recordsBeforeWrongPassword);
+    assert.deepEqual(await getEncryptedDatabase(page), recordsBeforeWrongPassword);
 
     await page.fill("#encryptedPassword", "SigurnaLozinka123!");
     await page.click("#encryptedBackupConfirmButton");
     await page.waitForFunction(() => document.querySelector("#backupMessage")?.textContent.includes("Uvoz je dovršen."));
     await assertVisibleText(page, "#backupMessage", "Uvoz je dovršen.");
-    hearings = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), STORAGE_KEY);
+    hearings = await getHearings(page);
     assert.ok(hearings.some((hearing) => hearing.plaintiff === "Croatia osiguranje"));
     assert.ok(hearings.some((hearing) => hearing.history?.some((event) => event.eventType === "imported")));
     const storageAfterEncryptedImport = await page.evaluate(() => Object.values(localStorage).join(" "));
@@ -1061,12 +1076,92 @@ async function assertNewHearingFormReady(page) {
   assert.equal(formViewport.noHorizontalScroll, true);
 }
 
+async function testLegacyPlaintextMigration(app, browser) {
+  const migrationContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const migrationPage = await migrationContext.newPage();
+  const legacyRecord = buildStoredHearing("legacy-plaintext-record", addDays(startOfDay(new Date()), 2), "Legacy Tuzitelj", "Legacy Tuzenik");
+  legacyRecord.caseNumber = "P-LEGACY/2026";
+
+  await migrationPage.goto(app.url, { waitUntil: "domcontentloaded" });
+  await migrationPage.evaluate(({ key, record }) => {
+    localStorage.setItem(key, JSON.stringify([record]));
+  }, { key: STORAGE_KEY, record: legacyRecord });
+  await migrationPage.reload({ waitUntil: "domcontentloaded" });
+  await assertVisibleText(migrationPage, "#lockSetupForm", "Postavite lozinku");
+  await migrationPage.fill("#lockSetupPassword", TEST_LOCK_PASSWORD);
+  await migrationPage.fill("#lockSetupPasswordConfirm", TEST_LOCK_PASSWORD);
+  await migrationPage.click('#lockSetupForm button[type="submit"]');
+  await migrationPage.waitForSelector("#lockMigrationPanel:not([hidden])");
+  await assertVisibleText(migrationPage, "#lockMigrationPanel", "PronaÄ‘eni su podaci iz starije verzije.");
+  await migrationPage.click("#lockMigrationButton");
+  await migrationPage.waitForFunction(() => !document.querySelector("#appShell")?.hidden);
+  assert.equal(await migrationPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY), null);
+  const encrypted = await getEncryptedDatabase(migrationPage);
+  assert.equal(encrypted.type, "rocisnik-encrypted-database");
+  const storageDump = await getStorageDump(migrationPage);
+  assert.equal(storageDump.includes("Legacy Tuzitelj"), false);
+  assert.equal(storageDump.includes("P-LEGACY/2026"), false);
+  await assertVisibleText(migrationPage, "body", "Legacy Tuzitelj");
+  if (await migrationPage.locator("#onboardingModal").isVisible()) {
+    await migrationPage.click("#onboardingFinishButton");
+  }
+  await migrationPage.click("#lockAppButton");
+  await unlockExistingApp(migrationPage);
+  await assertVisibleText(migrationPage, "body", "Legacy Tuzitelj");
+  await migrationContext.close();
+}
+
+async function testFailedLegacyPlaintextMigration(app, browser) {
+  const migrationContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const migrationPage = await migrationContext.newPage();
+  await migrationPage.goto(app.url, { waitUntil: "domcontentloaded" });
+  await migrationPage.evaluate((key) => {
+    localStorage.setItem(key, "{neispravan-json");
+  }, STORAGE_KEY);
+  await migrationPage.reload({ waitUntil: "domcontentloaded" });
+  await migrationPage.fill("#lockSetupPassword", TEST_LOCK_PASSWORD);
+  await migrationPage.fill("#lockSetupPasswordConfirm", TEST_LOCK_PASSWORD);
+  await migrationPage.click('#lockSetupForm button[type="submit"]');
+  await migrationPage.waitForSelector("#lockMigrationPanel:not([hidden])");
+  await assertVisibleText(migrationPage, "#lockMigrationPanel", "PronaÄ‘eni su podaci iz starije verzije.");
+  await migrationPage.click("#lockMigrationButton");
+  await assertVisibleText(migrationPage, "#lockMigrationMessage", "Migracija nije uspjela.");
+  assert.equal(await migrationPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY), "{neispravan-json");
+  assert.equal(await migrationPage.locator("#appShell").isHidden(), true);
+  await migrationContext.close();
+}
+
 async function unlockExistingApp(page) {
   await assertVisibleText(page, "#lockUnlockForm", "Otključajte Ročišnik");
   await page.fill("#lockUnlockPassword", TEST_LOCK_PASSWORD);
   await page.click('#lockUnlockForm button[type="submit"]');
   await page.waitForFunction(() => !document.querySelector("#appShell")?.hidden);
   assert.equal(await page.locator("#lockScreen").isHidden(), true);
+}
+
+async function getHearings(page) {
+  await page.waitForFunction(() => window.__rocisnikTest?.getHearings);
+  return page.evaluate(() => window.__rocisnikTest.getHearings());
+}
+
+async function replaceHearings(page, records) {
+  await page.waitForFunction(() => window.__rocisnikTest?.replaceHearings);
+  return page.evaluate((items) => window.__rocisnikTest.replaceHearings(items), records);
+}
+
+async function appendHearings(page, records) {
+  await page.waitForFunction(() => window.__rocisnikTest?.appendHearings);
+  return page.evaluate((items) => window.__rocisnikTest.appendHearings(items), records);
+}
+
+async function getEncryptedDatabase(page) {
+  await page.waitForFunction(() => window.__rocisnikTest?.getEncryptedDatabase);
+  return page.evaluate(() => window.__rocisnikTest.getEncryptedDatabase());
+}
+
+async function getStorageDump(page) {
+  await page.waitForFunction(() => window.__rocisnikTest?.getStorageDump);
+  return page.evaluate(() => window.__rocisnikTest.getStorageDump());
 }
 
 async function assertActivePanel(page, selector) {

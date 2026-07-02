@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "rocisnik.hearings.v1";
+  const ENCRYPTED_DATABASE_KEY = "rocisnik.encryptedDatabase.v2";
   const DATA_NOTICE_DISMISSED_KEY = "rocisnik.dataNoticeDismissed.v1";
   const SECURITY_NOTICE_ACCEPTED_AT_KEY = "securityNoticeAcceptedAt";
   const ONBOARDING_COMPLETED_AT_KEY = "onboardingCompletedAt";
@@ -13,6 +14,8 @@
   const LOCK_VERIFIER_KEY = "rocisnik.lockVerifier.v1";
   const BACKUP_FORMAT_VERSION = 1;
   const ENCRYPTED_BACKUP_FORMAT_VERSION = 1;
+  const ENCRYPTED_DATABASE_VERSION = 2;
+  const ENCRYPTED_DATABASE_TYPE = "rocisnik-encrypted-database";
   const LOCK_VERIFIER_VERSION = 1;
   const LOCK_VERIFIER_PAYLOAD = "rocisnik-verifier-v1";
   const ENCRYPTED_BACKUP_KDF_ITERATIONS = 250000;
@@ -187,6 +190,9 @@
     lockResetConfirm: document.getElementById("lockResetConfirm"),
     lockResetMessage: document.getElementById("lockResetMessage"),
     lockResetCancelButton: document.getElementById("lockResetCancelButton"),
+    lockMigrationPanel: document.getElementById("lockMigrationPanel"),
+    lockMigrationButton: document.getElementById("lockMigrationButton"),
+    lockMigrationMessage: document.getElementById("lockMigrationMessage"),
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
     calendarGrid: document.getElementById("calendarGrid"),
@@ -376,19 +382,20 @@
     showSetupScreen();
   }
 
-  function startApplication() {
+  async function startApplication() {
     normalizePublicUrl();
     registerServiceWorker();
     if (state.appStarted) {
-      state.hearings = loadHearings();
+      state.hearings = await loadHearings();
       render();
       checkDueReminders();
+      exposeTestHooks();
       startAutoLockTimer();
       return;
     }
     state.appStarted = true;
-    state.hearings = loadHearings();
-    if (state.hearings.length) saveHearings();
+    state.hearings = await loadHearings();
+    if (state.hearings.length) await saveHearings();
     if (hasTodayActiveHearings()) state.scheduleView = "today";
     state.visibleStart = weekStart;
     state.visibleEnd = getDefaultVisibleEnd();
@@ -530,6 +537,7 @@
     setMobileView(state.currentMobileView);
     render();
     checkDueReminders();
+    exposeTestHooks();
     if (!hasCompletedOnboarding()) openOnboardingModal();
     window.setInterval(checkDueReminders, REMINDER_CHECK_INTERVAL_MS);
   }
@@ -544,6 +552,34 @@
     window.history.replaceState({}, document.title, nextUrl);
   }
 
+  function isQaMode() {
+    return new URLSearchParams(window.location.search).has("qa");
+  }
+
+  function exposeTestHooks() {
+    if (!isQaMode()) return;
+    window.__rocisnikTest = {
+      getHearings: () => structuredClone(state.hearings),
+      replaceHearings: async (records) => {
+        state.hearings = normalizeStoredHearings(records || []);
+        state.selectedId = null;
+        state.editingId = null;
+        await saveHearings();
+        render();
+        return structuredClone(state.hearings);
+      },
+      appendHearings: async (records) => {
+        state.hearings = normalizeStoredHearings([...state.hearings, ...(records || [])]);
+        await saveHearings();
+        render();
+        return structuredClone(state.hearings);
+      },
+      getEncryptedDatabase: () => getEncryptedDatabaseEnvelope(),
+      getLegacyPlaintext: () => window.localStorage.getItem(STORAGE_KEY),
+      getStorageDump: () => Object.values(window.localStorage).join(" ")
+    };
+  }
+
   function getAutoLockMs() {
     const testValue = Number(new URLSearchParams(window.location.search).get("qaAutoLockMs"));
     if (Number.isFinite(testValue) && testValue >= 100) return testValue;
@@ -554,6 +590,7 @@
     els.lockSetupForm.addEventListener("submit", handleLockSetup);
     els.lockUnlockForm.addEventListener("submit", handleUnlockSubmit);
     els.lockResetForm.addEventListener("submit", handleLockReset);
+    els.lockMigrationButton.addEventListener("click", handleLegacyMigration);
     els.lockSetupShowPassword.addEventListener("change", () => togglePasswordInputs(
       els.lockSetupShowPassword.checked,
       els.lockSetupPassword,
@@ -592,7 +629,7 @@
       window.localStorage.setItem(LOCK_VERIFIER_KEY, JSON.stringify(verifier));
       els.lockSetupPassword.value = "";
       els.lockSetupPasswordConfirm.value = "";
-      unlockApp(key);
+      await unlockApp(key);
     } catch (error) {
       showLockSetupMessage("Postavljanje lozinke nije uspjelo. Pokušajte ponovno.", "error");
     }
@@ -604,7 +641,7 @@
     try {
       const key = await verifyLockPassword(els.lockUnlockPassword.value);
       els.lockUnlockPassword.value = "";
-      unlockApp(key);
+      await unlockApp(key);
     } catch (error) {
       showLockUnlockMessage("Lozinka nije ispravna.", "error");
     }
@@ -683,13 +720,31 @@
     }
   }
 
-  function unlockApp(sessionKey) {
+  async function unlockApp(sessionKey) {
     state.unlocked = true;
     state.sessionKey = sessionKey;
-    els.lockScreen.hidden = true;
-    els.appShell.hidden = false;
-    startApplication();
-    startAutoLockTimer();
+    els.appShell.hidden = true;
+    showLockUnlockMessage("");
+    showLockMigrationMessage("");
+    if (hasPlaintextLegacyDatabase() && !hasEncryptedDatabase()) {
+      showMigrationScreen();
+      return;
+    }
+
+    try {
+      if (!hasEncryptedDatabase()) await saveEncryptedDatabase({ hearings: [] });
+      await startApplication();
+      if (hasPlaintextLegacyDatabase()) window.localStorage.removeItem(STORAGE_KEY);
+      els.lockScreen.hidden = true;
+      els.appShell.hidden = false;
+      startAutoLockTimer();
+    } catch (error) {
+      state.unlocked = false;
+      state.sessionKey = null;
+      state.hearings = [];
+      showUnlockScreen();
+      showLockUnlockMessage("Lokalnu bazu nije moguÄ‡e deÅ¡ifrirati. Provjerite lozinku ili vratite podatke iz backup-a.", "error");
+    }
   }
 
   function lockApp() {
@@ -717,8 +772,10 @@
     els.lockSetupForm.hidden = false;
     els.lockUnlockForm.hidden = true;
     els.lockResetForm.hidden = true;
+    els.lockMigrationPanel.hidden = true;
     showLockUnlockMessage("");
     showLockResetMessage("");
+    showLockMigrationMessage("");
     window.requestAnimationFrame(() => els.lockSetupPassword.focus());
   }
 
@@ -729,8 +786,10 @@
     els.lockSetupForm.hidden = true;
     els.lockUnlockForm.hidden = false;
     els.lockResetForm.hidden = true;
+    els.lockMigrationPanel.hidden = true;
     showLockSetupMessage("");
     showLockResetMessage("");
+    showLockMigrationMessage("");
     window.requestAnimationFrame(() => els.lockUnlockPassword.focus());
   }
 
@@ -738,9 +797,42 @@
     els.lockSetupForm.hidden = true;
     els.lockUnlockForm.hidden = true;
     els.lockResetForm.hidden = false;
+    els.lockMigrationPanel.hidden = true;
     showLockUnlockMessage("");
     showLockResetMessage("");
+    showLockMigrationMessage("");
     window.requestAnimationFrame(() => els.lockResetConfirm.focus());
+  }
+
+  function showMigrationScreen() {
+    stopAutoLockTimer();
+    els.appShell.hidden = true;
+    els.lockScreen.hidden = false;
+    els.lockSetupForm.hidden = true;
+    els.lockUnlockForm.hidden = true;
+    els.lockResetForm.hidden = true;
+    els.lockMigrationPanel.hidden = false;
+    showLockMigrationMessage("PronaÄ‘eni su podaci iz starije verzije. Pokrenite migraciju u Å¡ifriranu lokalnu bazu.");
+    window.requestAnimationFrame(() => els.lockMigrationButton.focus());
+  }
+
+  async function handleLegacyMigration() {
+    if (!isUnlocked() || !getSessionKey()) return;
+    els.lockMigrationButton.disabled = true;
+    showLockMigrationMessage("Migracija je u tijeku. Ne zatvarajte aplikaciju.");
+    try {
+      state.hearings = await migratePlaintextToEncrypted();
+      showLockMigrationMessage("Migracija je uspjeÅ¡na.", "success");
+      await startApplication();
+      els.lockScreen.hidden = true;
+      els.appShell.hidden = false;
+      startAutoLockTimer();
+      render();
+    } catch (error) {
+      showLockMigrationMessage("Migracija nije uspjela. Stari podaci nisu obrisani.", "error");
+    } finally {
+      els.lockMigrationButton.disabled = false;
+    }
   }
 
   function clearSensitiveUi() {
@@ -834,6 +926,12 @@
   function showLockResetMessage(message, type = "error") {
     els.lockResetMessage.textContent = message;
     els.lockResetMessage.classList.toggle("error", type === "error" && Boolean(message));
+  }
+
+  function showLockMigrationMessage(message, type = "success") {
+    els.lockMigrationMessage.textContent = message;
+    els.lockMigrationMessage.classList.toggle("error", type === "error" && Boolean(message));
+    els.lockMigrationMessage.classList.toggle("success", type === "success" && Boolean(message));
   }
 
   function syncDataNotice() {
@@ -1128,7 +1226,7 @@
         return;
       }
 
-      const applied = applyValidatedImport(validation);
+      const applied = await applyValidatedImport(validation);
       if (!applied) return;
 
       closeEncryptedBackupModal();
@@ -1152,7 +1250,7 @@
         return;
       }
 
-      const applied = applyValidatedImport(validation);
+      const applied = await applyValidatedImport(validation);
       if (applied) {
         setLastJsonImportAt(new Date());
         renderBackupMetadata();
@@ -1162,7 +1260,7 @@
     }
   }
 
-  function applyValidatedImport(validation) {
+  async function applyValidatedImport(validation) {
     const mode = getImportMode();
     const action = mode === "replace" ? "zamijeniti postojeće podatke" : "dodati podatke u postojeći ročišnik";
     const duplicateNote = mode === "append" ? " Zapisi s istim ID-em neće se duplicirati." : "";
@@ -1173,7 +1271,7 @@
     }
 
     const result = importHearings(validation.hearings, mode);
-    saveHearings();
+    await saveHearings();
     resetForm();
     focusImportedRange(result.visibleHearings);
     render();
@@ -1505,7 +1603,8 @@
       exportedAt: new Date().toISOString(),
       metadata: {
         appName: "Ročišnik",
-        storageKey: STORAGE_KEY
+        storageKey: ENCRYPTED_DATABASE_KEY,
+        localDatabase: "encrypted"
       },
       hearings: state.hearings
     };
@@ -1820,10 +1919,10 @@
       JSON.stringify(normalizeReminders(hearing.reminders)) !== JSON.stringify(normalizeReminders(data.reminders));
   }
 
-  function checkDueReminders() {
+  async function checkDueReminders() {
     state.activeReminders = getDueReminders(new Date());
-    markShownReminderEvents(state.activeReminders);
-    sendBrowserNotifications(state.activeReminders);
+    await markShownReminderEvents(state.activeReminders);
+    await sendBrowserNotifications(state.activeReminders);
     renderReminders();
   }
 
@@ -1930,7 +2029,7 @@
     return wrapper;
   }
 
-  function handleReminderAction(event) {
+  async function handleReminderAction(event) {
     const button = event.target.closest("[data-reminder-action]");
     if (!button) return;
 
@@ -1964,12 +2063,12 @@
       };
     });
 
-    saveHearings();
+    await saveHearings();
     checkDueReminders();
     renderDetails();
   }
 
-  function markShownReminderEvents(reminders) {
+  async function markShownReminderEvents(reminders) {
     const now = new Date().toISOString();
     let changed = false;
     reminders.forEach((item) => {
@@ -1990,10 +2089,10 @@
         };
       });
     });
-    if (changed) saveHearings();
+    if (changed) await saveHearings();
   }
 
-  function sendBrowserNotifications(reminders) {
+  async function sendBrowserNotifications(reminders) {
     if (!("Notification" in window) || window.Notification.permission !== "granted") return;
 
     let changed = false;
@@ -2020,7 +2119,7 @@
         };
       });
     });
-    if (changed) saveHearings();
+    if (changed) await saveHearings();
   }
 
   async function requestBrowserNotifications() {
@@ -2158,7 +2257,7 @@
     return Boolean(value && typeof value === "object" && !Array.isArray(value));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     clearValidation();
 
@@ -2216,7 +2315,7 @@
       showFormMessage("Ročište je dodano.", "success");
     }
 
-    saveHearings();
+    await saveHearings();
     resetForm({ keepMessage: true });
     if (wasEditing) state.currentUtilityView = "search";
     setMobileView(state.selectedId ? "details" : "schedule");
@@ -3092,7 +3191,7 @@
     els.fields.plaintiff.focus();
   }
 
-  function deleteSelected() {
+  async function deleteSelected() {
     const hearing = getSelectedHearing();
     if (!hearing) return;
 
@@ -3113,14 +3212,14 @@
     );
     state.selectedId = state.showDeleted ? hearing.id : null;
     state.editingId = null;
-    saveHearings();
+    await saveHearings();
     resetForm();
     setMobileView(state.showDeleted ? "details" : "schedule");
     render();
     checkDueReminders();
   }
 
-  function restoreSelected() {
+  async function restoreSelected() {
     const hearing = getSelectedHearing();
     if (!hearing || !isDeletedHearing(hearing)) return;
 
@@ -3141,7 +3240,7 @@
       );
     });
     state.selectedId = hearing.id;
-    saveHearings();
+    await saveHearings();
     render();
     checkDueReminders();
   }
@@ -3660,36 +3759,147 @@
     });
   }
 
-  function loadHearings() {
+  async function loadHearings() {
+    const database = await loadEncryptedDatabase();
+    return normalizeStoredHearings(database.hearings || []);
+  }
+
+  async function saveHearings() {
+    await saveEncryptedDatabase({ hearings: state.hearings });
+  }
+
+  function normalizeStoredHearings(items) {
+    if (!Array.isArray(items)) return [];
+    return items
+      .filter((item) => item && item.id && item.hearingDateTime)
+      .map((item) => {
+        const normalized = {
+          ...item,
+          status: normalizeStatus(item.status),
+          reminders: normalizeReminders(item.reminders),
+          reminderDismissedAt: getOptionalImportString(item.reminderDismissedAt),
+          reminderSnoozedUntil: getOptionalImportString(item.reminderSnoozedUntil),
+          reminderDisabled: Boolean(item.reminderDisabled),
+          reminderEvents: normalizeReminderEvents(item.reminderEvents)
+        };
+        return {
+          ...normalized,
+          history: normalizeHistory(item.history, normalized, "legacy-imported")
+        };
+      });
+  }
+
+  async function loadEncryptedDatabase() {
+    const envelope = getEncryptedDatabaseEnvelope();
+    if (!envelope) return { hearings: [] };
+    return decryptDatabase(envelope, getSessionKey());
+  }
+
+  async function saveEncryptedDatabase(data) {
+    const key = getSessionKey();
+    if (!key) throw new Error("Missing session key");
+    const existingEnvelope = getEncryptedDatabaseEnvelope();
+    const envelope = await encryptDatabase(data, key, existingEnvelope?.createdAt);
+    window.localStorage.setItem(ENCRYPTED_DATABASE_KEY, JSON.stringify(envelope));
+  }
+
+  async function encryptDatabase(data, key, existingCreatedAt = "") {
+    if (!key) throw new Error("Missing encryption key");
+    const verifier = getLockVerifier();
+    validateLockVerifier(verifier);
+    const iv = generateRandomBytes(ENCRYPTED_BACKUP_IV_BYTES);
+    const encoded = new TextEncoder().encode(JSON.stringify({
+      version: ENCRYPTED_DATABASE_VERSION,
+      hearings: normalizeStoredHearings(data?.hearings || [])
+    }));
+    const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+    const now = new Date().toISOString();
+    return {
+      version: ENCRYPTED_DATABASE_VERSION,
+      type: ENCRYPTED_DATABASE_TYPE,
+      encrypted: true,
+      kdf: {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        iterations: verifier.iterations,
+        salt: verifier.salt
+      },
+      cipher: {
+        name: "AES-GCM",
+        iv: arrayBufferToBase64(iv)
+      },
+      ciphertext: arrayBufferToBase64(ciphertext),
+      createdAt: existingCreatedAt || now,
+      updatedAt: now
+    };
+  }
+
+  async function decryptDatabase(envelope, key) {
+    validateEncryptedDatabaseEnvelope(envelope);
+    if (!key) throw new Error("Missing decryption key");
+    const iv = base64ToUint8Array(envelope.cipher.iv);
+    const ciphertext = base64ToUint8Array(envelope.ciphertext);
+    const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+    const payload = JSON.parse(new TextDecoder().decode(decrypted));
+    if (!payload || payload.version !== ENCRYPTED_DATABASE_VERSION || !Array.isArray(payload.hearings)) {
+      throw new Error("Invalid encrypted database payload");
+    }
+    return { hearings: payload.hearings };
+  }
+
+  function validateEncryptedDatabaseEnvelope(envelope) {
+    if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) throw new Error("Invalid encrypted database");
+    if (envelope.version !== ENCRYPTED_DATABASE_VERSION || envelope.type !== ENCRYPTED_DATABASE_TYPE || envelope.encrypted !== true) throw new Error("Unsupported encrypted database");
+    if (envelope.kdf?.name !== "PBKDF2" || envelope.kdf?.hash !== "SHA-256") throw new Error("Unsupported database KDF");
+    if (!Number.isInteger(envelope.kdf.iterations) || envelope.kdf.iterations < ENCRYPTED_BACKUP_KDF_ITERATIONS) throw new Error("Invalid database KDF iterations");
+    if (envelope.cipher?.name !== "AES-GCM" || !envelope.cipher.iv) throw new Error("Invalid database cipher");
+    if (!envelope.kdf.salt || !envelope.ciphertext) throw new Error("Missing encrypted database data");
+    if (base64ToUint8Array(envelope.kdf.salt).byteLength < ENCRYPTED_BACKUP_SALT_BYTES) throw new Error("Invalid database salt");
+    if (base64ToUint8Array(envelope.cipher.iv).byteLength !== ENCRYPTED_BACKUP_IV_BYTES) throw new Error("Invalid database IV");
+    if (base64ToUint8Array(envelope.ciphertext).byteLength === 0) throw new Error("Invalid database ciphertext");
+  }
+
+  function getEncryptedDatabaseEnvelope() {
+    try {
+      return JSON.parse(window.localStorage.getItem(ENCRYPTED_DATABASE_KEY) || "null");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function hasEncryptedDatabase() {
+    return Boolean(window.localStorage.getItem(ENCRYPTED_DATABASE_KEY));
+  }
+
+  function hasPlaintextLegacyDatabase() {
+    return Boolean(window.localStorage.getItem(STORAGE_KEY));
+  }
+
+  function readPlaintextLegacyHearings() {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter((item) => item && item.id && item.hearingDateTime)
-        .map((item) => {
-          const normalized = {
-            ...item,
-            status: normalizeStatus(item.status),
-            reminders: normalizeReminders(item.reminders),
-            reminderDismissedAt: getOptionalImportString(item.reminderDismissedAt),
-            reminderSnoozedUntil: getOptionalImportString(item.reminderSnoozedUntil),
-            reminderDisabled: Boolean(item.reminderDisabled),
-            reminderEvents: normalizeReminderEvents(item.reminderEvents)
-          };
-          return {
-            ...normalized,
-            history: normalizeHistory(item.history, normalized, "legacy-imported")
-          };
-        });
+      if (!Array.isArray(parsed)) throw new Error("Legacy database is not an array");
+      return normalizeStoredHearings(parsed);
     } catch (error) {
-      return [];
+      throw new Error("Invalid legacy database");
     }
   }
 
-  function saveHearings() {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.hearings));
+  async function migratePlaintextToEncrypted() {
+    const legacyHearings = readPlaintextLegacyHearings();
+    await saveEncryptedDatabase({ hearings: legacyHearings });
+    const encrypted = normalizeStoredHearings((await loadEncryptedDatabase()).hearings);
+    if (!areHearingListsEquivalent(legacyHearings, encrypted)) {
+      throw new Error("Encrypted database validation failed");
+    }
+    window.localStorage.removeItem(STORAGE_KEY);
+    return encrypted;
+  }
+
+  function areHearingListsEquivalent(left, right) {
+    return JSON.stringify(normalizeStoredHearings(left)) === JSON.stringify(normalizeStoredHearings(right));
   }
 
   function getWeekStart(date) {

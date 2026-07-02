@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=88">
+    <link rel="stylesheet" href="styles.css?v=89">
   </head>
   <body>
     <main class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
@@ -73,6 +73,14 @@
           <button class="danger-button" type="submit">Obriši lokalne podatke</button>
           <button class="ghost-button" type="button" id="lockResetCancelButton">Odustani</button>
         </form>
+
+        <section class="lock-form lock-migration" id="lockMigrationPanel" hidden>
+          <h2>PronaÄ‘eni su podaci iz starije verzije.</h2>
+          <p>Podaci Ä‡e biti migrirani u Å¡ifriranu lokalnu bazu.</p>
+          <p>Ne zatvarajte aplikaciju dok migracija ne zavrÅ¡i.</p>
+          <p class="lock-message" id="lockMigrationMessage" role="status" aria-live="polite"></p>
+          <button class="primary-button" type="button" id="lockMigrationButton">Migriraj podatke</button>
+        </section>
       </section>
     </main>
 
@@ -731,6 +739,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=88"></script>
+    <script src="app.js?v=89"></script>
   </body>
 </html>
