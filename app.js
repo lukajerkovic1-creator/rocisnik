@@ -73,6 +73,11 @@
       emptyTitle: "Nema aktivnih ročišta.",
       emptyText: "Kad dodaš ročište, pojavit će se ovdje kronološki."
     },
+    active: {
+      label: "Aktivno",
+      emptyTitle: "Nema aktivnih ročišta.",
+      emptyText: "Zakazana, odgođena i održana ročišta pojavit će se ovdje."
+    },
     custom: {
       label: "Odabrano razdoblje",
       emptyTitle: "Nema ročišta u odabranom razdoblju.",
@@ -2623,7 +2628,7 @@
     return getVisibleHearings()
       .filter((hearing) => {
         const date = new Date(hearing.hearingDateTime);
-        return !Number.isNaN(date.getTime()) && matchesScheduleView(date);
+        return !Number.isNaN(date.getTime()) && matchesScheduleView(hearing, date);
       })
       .sort(compareHearingsByDate);
   }
@@ -2645,10 +2650,11 @@
       .sort((a, b) => a - b);
   }
 
-  function matchesScheduleView(date) {
+  function matchesScheduleView(hearing, date) {
     if (state.scheduleView === "today") return isToday(date);
     if (state.scheduleView === "week") return isThisWeek(date);
     if (state.scheduleView === "next30") return isWithinNextDays(date, 30);
+    if (state.scheduleView === "active") return normalizeStatus(hearing.status) !== "otkazano";
     if (state.scheduleView === "custom") return date >= state.visibleStart && date <= state.visibleEnd;
     return true;
   }
@@ -2667,7 +2673,8 @@
       today: validHearings.filter((hearing) => isToday(new Date(hearing.hearingDateTime))).length,
       week: validHearings.filter((hearing) => isThisWeek(new Date(hearing.hearingDateTime))).length,
       next30: validHearings.filter((hearing) => isWithinNextDays(new Date(hearing.hearingDateTime), 30)).length,
-      all: visibleHearings.length
+      all: visibleHearings.length,
+      active: visibleHearings.filter((hearing) => normalizeStatus(hearing.status) !== "otkazano").length
     };
     els.scheduleViewButtons.forEach((button) => {
       const isActive = button.dataset.scheduleView === state.scheduleView;
@@ -3023,6 +3030,11 @@
     }
     if (state.scheduleView === "all") {
       const text = state.showDeleted ? "Sva ročišta, uključujući obrisane" : "Sva aktivna ročišta";
+      setRangeText(text, text);
+      return;
+    }
+    if (state.scheduleView === "active") {
+      const text = "Aktivno: zakazana, odgođena i održana ročišta";
       setRangeText(text, text);
       return;
     }

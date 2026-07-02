@@ -561,6 +561,16 @@ async function run() {
     await assertScheduleIncludes(page, "Prošlo");
     await assertScheduleExcludes(page, "Datum Obrisano");
 
+    await page.click('.overview-card[data-schedule-view="active"]');
+    assert.equal(await page.locator('.overview-card[data-schedule-view="active"]').getAttribute("aria-pressed"), "true");
+    assert.ok((await page.locator("#rangeLabel").textContent()).includes("Aktivno"));
+    await assertScheduleIncludes(page, "Datum Danas");
+    await assertScheduleIncludes(page, "Datum Odgodeno");
+    await assertScheduleIncludes(page, "Datum Jucer");
+    await assertScheduleExcludes(page, "Datum Otkazano");
+    await assertScheduleExcludes(page, "Datum Obrisano");
+    await page.click('.schedule-view-tabs [data-schedule-view="all"]');
+
     await page.fill("#filterDateFrom", toDateKey(today));
     await page.fill("#filterDateTo", toDateKey(tomorrow));
     await page.click("#searchButton");

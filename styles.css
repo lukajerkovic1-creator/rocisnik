@@ -760,7 +760,7 @@ select:focus-visible {
   background: #e9f6eb;
 }
 
-.overview-card-static .overview-icon {
+.overview-card[data-schedule-view="active"] .overview-icon {
   color: #8a6ad9;
   background: #f0ebff;
 }
@@ -791,7 +791,7 @@ select:focus-visible {
   content: "30";
 }
 
-.overview-card-static::before {
+.overview-card[data-schedule-view="active"]::before {
   content: "Σ";
   color: #59635f;
   background: #eef2f1;

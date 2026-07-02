@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="app-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="app-icon.svg">
-    <link rel="stylesheet" href="styles.css?v=78">
+    <link rel="stylesheet" href="styles.css?v=79">
   </head>
   <body>
     <div class="app-shell">
@@ -145,7 +145,7 @@
           <span class="overview-countline"><strong id="summaryNext30Count">0</strong><small>ročišta</small></span>
           <span class="overview-meta" id="summaryNext30Meta">0 nadolazećih · 0 odgođeno</span>
         </button>
-        <div class="overview-card overview-card-static">
+        <button class="overview-card" type="button" data-schedule-view="active">
           <span class="overview-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false">
               <path d="M12 3v18M6 7h12M7 7l-4 7h8L7 7Zm10 0-4 7h8l-4-7ZM9 21h6" />
@@ -154,7 +154,7 @@
           <span>Aktivno</span>
           <span class="overview-countline"><strong id="summaryActiveCount">0</strong><small>ročišta</small></span>
           <span class="overview-meta" id="summaryActiveMeta">zakazano, odgođeno, održano</span>
-        </div>
+        </button>
       </section>
 
       <main class="workspace">
@@ -682,6 +682,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=78"></script>
+    <script src="app.js?v=79"></script>
   </body>
 </html>
