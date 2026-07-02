@@ -149,6 +149,15 @@ async function run() {
       const topNewIconStyle = getComputedStyle(document.querySelector("#clearSelectionButton"), "::before");
       const topbarActionIconStyle = getComputedStyle(document.querySelector(".topbar-action-icon"));
       const topbarActionSvg = document.querySelector(".topbar-action-icon svg")?.getBoundingClientRect();
+      const topbarUtilityButtons = ["#dataSafetyButton", "#onboardingButton", "#settingsButton"].map((selector) => {
+        const button = document.querySelector(selector);
+        const style = getComputedStyle(button);
+        return {
+          paddingRight: Number.parseFloat(style.paddingRight),
+          paddingLeft: Number.parseFloat(style.paddingLeft),
+          contentFits: button.scrollWidth <= button.clientWidth + 1
+        };
+      });
       const detailActionButtons = ["#editButton", "#deleteButton", "#moreDetailsButton"];
       const detailActionButtonsAreBordered = detailActionButtons.every((selector) => {
         const style = getComputedStyle(document.querySelector(selector));
@@ -209,6 +218,9 @@ async function run() {
         topbarActionIconsAreLightweight: topbarActionIconStyle.backgroundColor === "rgba(0, 0, 0, 0)"
           && Number.parseFloat(topbarActionIconStyle.width) <= 18
           && topbarActionSvg?.width <= 17,
+        topbarUtilityButtonsHaveBreathingRoom: topbarUtilityButtons.every((button) =>
+          button.paddingLeft >= 8 && button.paddingRight >= 8 && button.contentFits
+        ),
         detailActionButtonsHaveIcons: detailActionButtons.every((selector) => {
           const iconStyle = getComputedStyle(document.querySelector(selector), "::before");
           return iconStyle.content === '""' && iconStyle.maskImage !== "none";
@@ -244,6 +256,7 @@ async function run() {
     assert.equal(desktopLayout.quickSearchHasIcon, true);
     assert.equal(desktopLayout.topNewButtonHasIcon, true);
     assert.equal(desktopLayout.topbarActionIconsAreLightweight, true);
+    assert.equal(desktopLayout.topbarUtilityButtonsHaveBreathingRoom, true);
     assert.equal(desktopLayout.detailActionButtonsHaveIcons, true);
     assert.equal(desktopLayout.detailActionButtonsAreBordered, true);
     assert.equal(desktopLayout.statusBadgesAreUppercase, true);

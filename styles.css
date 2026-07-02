@@ -668,8 +668,9 @@ select:focus-visible {
 .topbar-actions .text-button {
   gap: 8px;
   min-height: 36px;
-  padding: 0;
+  padding: 0 10px;
   color: #354642;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 760;
 }
