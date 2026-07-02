@@ -94,6 +94,7 @@ async function run() {
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#onboardingModal").isHidden(), true);
     await page.click("#onboardingButton");
+    await assertActivePanel(page, "#onboardingModal .modal-panel");
     await assertVisibleText(page, "#onboardingModal", "Za osjetljive podatke koristite samo zaštićen uređaj.");
     await page.click("#onboardingSkipButton");
     assert.equal(await page.locator("#onboardingModal").isHidden(), true);
@@ -104,6 +105,7 @@ async function run() {
     await assertVisibleText(page, "#lastJsonImportAt", "nikada");
 
     await page.click("#securityPromptMoreButton");
+    await assertActivePanel(page, "#securityNoticeModal .modal-panel");
     await assertVisibleText(page, "#securityNoticeModal", "Ova aplikacija sprema podatke lokalno");
     await page.click("#securityNoticeDismissButton");
     assert.equal(await page.locator("#securityPrompt").isVisible(), true);
@@ -291,6 +293,7 @@ async function run() {
     await page.click("#dataSafetyButton");
     await assertVisibleText(page, "#dataNotice .data-storage-note", "Podaci se čuvaju samo");
     assert.equal(await page.locator("#dismissDataNoticeButton").isVisible(), true);
+    await assertActivePanel(page, "#dataNotice");
 
     const onlyDeleted = {
       ...buildStoredHearing("only-deleted-record", startOfDay(new Date()), "Obrisano Samo", "Test Osoba"),
@@ -324,13 +327,16 @@ async function run() {
     await page.click('.mobile-tab[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").evaluate((panel) => panel.classList.contains("utility-active")), true);
     assert.equal(await page.locator("#filterPlaintiff").isVisible(), true);
+    await assertActivePanel(page, ".search-panel");
     await page.click('.search-panel [data-utility-view="form"]');
     await assertNewHearingFormReady(page);
     await page.click('.schedule-view-tabs [data-schedule-view="next30"]');
+    await assertActivePanel(page, ".schedule-panel");
 
     assert.equal(await page.locator(".reminders-panel").isVisible(), false);
     await page.click('.entry-panel [data-utility-view="reminders"]');
     assert.equal(await page.locator(".reminders-panel").isVisible(), true);
+    await assertActivePanel(page, ".reminders-panel");
     assert.equal(await page.locator("#defaultReminderSelect").inputValue(), "1d");
     assert.equal(await page.locator("#reminder1d").isChecked(), true);
     await page.selectOption("#defaultReminderSelect", "2h");
@@ -503,8 +509,10 @@ async function run() {
     assert.equal(twoWeekDesktop.noHorizontalScroll, true);
     await page.locator(".two-week-hearing", { hasText: "Dva Tjedna Sljedeci" }).click();
     await assertVisibleText(page, "#detailsParties", "P-two-week-next/2026");
+    await assertActivePanel(page, ".details-panel");
     assert.equal(await page.locator(".two-week-panel").isVisible(), true);
     await page.click('.mobile-tab[data-mobile-view="schedule"]');
+    await assertActivePanel(page, ".schedule-panel");
     await assertScheduleViewActive(page, "today");
     await assertScheduleIncludes(page, "Datum Danas");
     await assertScheduleExcludes(page, "Datum Deset");
@@ -903,6 +911,7 @@ async function run() {
     assert.equal(await page.locator(".mobile-tabs").isVisible(), true);
     await page.click('.mobile-tab[data-mobile-view="twoWeek"]');
     assert.equal(await page.locator(".two-week-panel").isVisible(), true);
+    await assertActivePanel(page, ".two-week-panel");
     const twoWeekMobileLayout = await page.evaluate(() => {
       const calendar = document.querySelector(".two-week-calendar");
       const cards = Array.from(document.querySelectorAll(".two-week-day"));
@@ -924,6 +933,7 @@ async function run() {
     assert.equal(await page.locator('.schedule-view-tabs [data-schedule-view="next30"]').isVisible(), true);
     await page.click('.mobile-tab[data-mobile-view="search"]');
     assert.equal(await page.locator(".search-panel").isVisible(), true);
+    await assertActivePanel(page, ".search-panel");
     assert.equal(await page.locator("#filterStatus").isVisible(), true);
     assert.equal(await page.locator("#filterCaseNumber").isVisible(), true);
     assert.equal(await page.locator("#filterValueRange").isVisible(), true);
@@ -1013,12 +1023,23 @@ async function assertNewHearingFormReady(page) {
     return {
       fieldVisible: Boolean(plaintiff && plaintiff.top >= 0 && plaintiff.bottom <= window.innerHeight),
       panelHighlighted: Boolean(panel?.classList.contains("new-hearing-focus")),
+      panelActive: Boolean(panel?.classList.contains("is-active-panel")),
       noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
     };
   });
   assert.equal(formViewport.fieldVisible, true);
   assert.equal(formViewport.panelHighlighted, true);
+  assert.equal(formViewport.panelActive, true);
   assert.equal(formViewport.noHorizontalScroll, true);
+}
+
+async function assertActivePanel(page, selector) {
+  await page.waitForFunction((targetSelector) => {
+    const target = document.querySelector(targetSelector);
+    return Boolean(target?.classList.contains("is-active-panel"));
+  }, selector);
+  const activeCount = await page.locator(".is-active-panel").count();
+  assert.equal(activeCount, 1);
 }
 
 async function openHistoryPanel(page) {

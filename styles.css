@@ -878,6 +878,22 @@ select:focus-visible {
   padding: 16px;
 }
 
+.focus-panel {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.focus-panel:focus-within,
+.focus-panel.is-active-panel {
+  border-color: rgba(15, 107, 99, 0.72) !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 107, 99, 0.14),
+    var(--shadow) !important;
+  background-color: rgba(15, 107, 99, 0.025);
+}
+
 .entry-panel {
   grid-area: search;
 }
@@ -1582,6 +1598,10 @@ select.invalid {
   button:hover:not(:disabled),
   button:active:not(:disabled) {
     transform: none;
+  }
+
+  .focus-panel {
+    transition: none;
   }
 }
 
@@ -3454,4 +3474,13 @@ select.invalid {
   .panel-heading {
     flex-direction: column;
   }
+}
+
+.focus-panel:focus-within,
+.focus-panel.is-active-panel {
+  border-color: rgba(15, 107, 99, 0.72) !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 107, 99, 0.14),
+    var(--shadow) !important;
+  background-color: rgba(15, 107, 99, 0.025);
 }

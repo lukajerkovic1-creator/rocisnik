@@ -31,6 +31,17 @@
     { value: "1d", label: "1 dan prije", reminders: [{ id: "1d", label: "1 dan prije", minutesBefore: 24 * 60 }] },
     { value: "7d", label: "7 dana prije", reminders: [{ id: "7d", label: "7 dana prije", minutesBefore: 7 * 24 * 60 }] }
   ];
+  const FOCUS_PANEL_SELECTOR = [
+    ".entry-panel",
+    ".search-panel",
+    ".schedule-panel",
+    ".two-week-panel",
+    ".details-panel",
+    ".data-notice",
+    ".backup-reminder",
+    ".reminders-panel",
+    ".modal-panel"
+  ].join(", ");
   const DEFAULT_HEARING_STATUS = "zakazano";
   const AUDIT_FIELDS = [
     { key: "plaintiff", label: "Tužitelj" },
@@ -188,6 +199,9 @@
     remindersPanel: document.querySelector(".reminders-panel"),
     entryPanel: document.querySelector(".entry-panel"),
     searchPanel: document.querySelector(".search-panel"),
+    schedulePanel: document.querySelector(".schedule-panel"),
+    twoWeekPanel: document.querySelector(".two-week-panel"),
+    detailsPanel: document.querySelector(".details-panel"),
     utilityButtons: Array.from(document.querySelectorAll("[data-utility-view]")),
     utilityReminderCounts: Array.from(document.querySelectorAll(".utility-reminder-count")),
     exportJsonButton: document.getElementById("exportJsonButton"),
@@ -450,6 +464,7 @@
       button.addEventListener("click", () => openUtilityView(button.dataset.utilityView));
     });
 
+    initializeFocusPanels();
     setDefaultDateTime();
     setDefaultReminderForm();
     syncDataNotice();
@@ -467,6 +482,28 @@
     els.dataNotice.classList.toggle("storage-note-dismissed", dismissed);
   }
 
+  function initializeFocusPanels() {
+    document.querySelectorAll(FOCUS_PANEL_SELECTOR).forEach((panel) => {
+      panel.classList.add("focus-panel");
+    });
+    document.addEventListener("focusin", activatePanelFromEvent);
+    document.addEventListener("click", activatePanelFromEvent, true);
+  }
+
+  function activatePanelFromEvent(event) {
+    const panel = event.target?.closest?.(FOCUS_PANEL_SELECTOR);
+    if (!panel) return;
+    setActivePanel(panel);
+  }
+
+  function setActivePanel(panel) {
+    if (!panel) return;
+    document.querySelectorAll(".is-active-panel").forEach((item) => {
+      if (item !== panel) item.classList.remove("is-active-panel");
+    });
+    panel.classList.add("focus-panel", "is-active-panel");
+  }
+
   function dismissDataNotice() {
     window.localStorage.setItem(DATA_NOTICE_DISMISSED_KEY, "true");
     syncDataNotice();
@@ -475,6 +512,7 @@
   function showDataNotice() {
     window.localStorage.removeItem(DATA_NOTICE_DISMISSED_KEY);
     syncDataNotice();
+    setActivePanel(els.dataNotice);
     els.dataNotice.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -495,6 +533,7 @@
   function openSecurityNoticeModal() {
     els.securityNoticeModal.hidden = false;
     document.body.classList.add("modal-open");
+    setActivePanel(els.securityNoticeModal.querySelector(".modal-panel"));
     els.securityNoticeCloseButton.focus();
   }
 
@@ -510,6 +549,7 @@
   function openOnboardingModal() {
     els.onboardingModal.hidden = false;
     document.body.classList.add("modal-open");
+    setActivePanel(els.onboardingModal.querySelector(".modal-panel"));
     els.onboardingFinishButton.focus();
   }
 
@@ -558,6 +598,7 @@
     showJsonExportMessage("");
     els.jsonExportModal.hidden = false;
     document.body.classList.add("modal-open");
+    setActivePanel(els.jsonExportModal.querySelector(".modal-panel"));
     els.jsonExportDownloadButton.focus();
   }
 
@@ -632,6 +673,7 @@
     els.encryptedBackupConfirmButton.textContent = isExport ? "Izvezi šifrirani backup" : "Uvezi šifrirani backup";
     els.encryptedBackupModal.hidden = false;
     document.body.classList.add("modal-open");
+    setActivePanel(els.encryptedBackupModal.querySelector(".modal-panel"));
     els.encryptedPassword.focus();
   }
 
@@ -1334,6 +1376,7 @@
       state.currentUtilityView = "reminders";
       setMobileView("search");
       render();
+      setActivePanel(els.remindersPanel || els.searchPanel);
       els.remindersPanel.scrollIntoView({ behavior: "smooth", block: "start" });
       els.enableNotificationsButton.focus({ preventScroll: true });
       return;
@@ -1341,6 +1384,7 @@
     state.currentUtilityView = "search";
     setMobileView("search");
     render();
+    setActivePanel(els.searchPanel);
     els.filters.plaintiff.focus();
   }
 
@@ -2177,6 +2221,7 @@
   function highlightNewHearingPanel(panel) {
     if (!panel) return;
     window.clearTimeout(newHearingFocusTimer);
+    setActivePanel(panel);
     panel.classList.add("new-hearing-focus");
     newHearingFocusTimer = window.setTimeout(() => {
       panel.classList.remove("new-hearing-focus");
@@ -2277,6 +2322,7 @@
       setMobileView(desktopReturnView);
     }
     render();
+    setActivePanel(els.detailsPanel);
   }
 
   function renderSearchResults() {
@@ -2608,6 +2654,17 @@
     els.mobileViews.forEach((panel) => {
       panel.classList.toggle("active", panel.dataset.view === view);
     });
+    const activePanel = getPanelForMobileView(view);
+    if (activePanel) setActivePanel(activePanel);
+  }
+
+  function getPanelForMobileView(view) {
+    if (view === "form") return els.entryPanel;
+    if (view === "search") return state.currentUtilityView === "reminders" ? (els.remindersPanel || els.searchPanel) : els.searchPanel;
+    if (view === "schedule") return els.schedulePanel;
+    if (view === "twoWeek") return els.twoWeekPanel;
+    if (view === "details") return els.detailsPanel;
+    return null;
   }
 
   function getSelectedHearing() {
@@ -2979,6 +3036,7 @@
     if (!SCHEDULE_VIEWS[view]) return;
     state.scheduleView = view;
     render();
+    setActivePanel(els.schedulePanel);
     requestAnimationFrame(() => {
       els.calendarGrid.scrollIntoView({ behavior: "smooth", block: "start" });
     });
