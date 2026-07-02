@@ -141,6 +141,8 @@
     }
   };
 
+  let newHearingFocusTimer = 0;
+
   const els = {
     rangeLabel: document.getElementById("rangeLabel"),
     todayChip: document.getElementById("todayChip"),
@@ -2128,8 +2130,9 @@
 
   function scrollAndFocusNewHearingForm() {
     const formPanel = els.entryPanel || els.form;
-    const target = els.formTitle || formPanel;
     const focusTarget = getNewHearingFocusTarget();
+    const target = focusTarget?.closest?.("label") || focusTarget || formPanel;
+    highlightNewHearingPanel(formPanel);
 
     requestAnimationFrame(() => {
       scrollToFormTarget(target || formPanel);
@@ -2156,7 +2159,7 @@
   }
 
   function getNewHearingFocusTarget() {
-    if (isFocusableInput(els.fields.caseNumber)) return els.fields.caseNumber;
+    if (isFocusableInput(els.fields.plaintiff)) return els.fields.plaintiff;
     const required = els.form?.querySelector("input[required], select[required], textarea[required]");
     if (isFocusableInput(required)) return required;
     return els.form?.querySelector("input:not([type='hidden']), select, textarea, button") || null;
@@ -2164,6 +2167,15 @@
 
   function isFocusableInput(element) {
     return Boolean(element && !element.disabled && element.offsetParent !== null);
+  }
+
+  function highlightNewHearingPanel(panel) {
+    if (!panel) return;
+    window.clearTimeout(newHearingFocusTimer);
+    panel.classList.add("new-hearing-focus");
+    newHearingFocusTimer = window.setTimeout(() => {
+      panel.classList.remove("new-hearing-focus");
+    }, 2200);
   }
 
   function showDeletedRecords() {

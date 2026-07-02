@@ -882,6 +882,16 @@ select:focus-visible {
   grid-area: search;
 }
 
+.entry-panel.new-hearing-focus {
+  border-color: rgba(15, 107, 99, 0.72) !important;
+  box-shadow:
+    0 0 0 4px rgba(15, 107, 99, 0.16),
+    0 18px 36px rgba(15, 107, 99, 0.14) !important;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
 .search-panel {
   grid-area: search;
   width: 100%;

@@ -995,19 +995,19 @@ async function assertNewHearingFormReady(page) {
   await assertVisibleText(page, "#formTitle", "Novo ročište");
   await assertVisibleText(page, "#submitButton", "Spremi ročište");
   assert.equal(await page.locator("#hearingId").inputValue(), "");
-  assert.equal(await page.locator("#caseNumber").isVisible(), true);
-  await page.waitForFunction(() => document.activeElement?.id === "caseNumber");
+  assert.equal(await page.locator("#plaintiff").isVisible(), true);
+  await page.waitForFunction(() => document.activeElement?.id === "plaintiff");
   const formViewport = await page.evaluate(() => {
-    const title = document.querySelector("#formTitle")?.getBoundingClientRect();
-    const caseNumber = document.querySelector("#caseNumber")?.getBoundingClientRect();
+    const plaintiff = document.querySelector("#plaintiff")?.getBoundingClientRect();
+    const panel = document.querySelector(".entry-panel");
     return {
-      titleVisible: Boolean(title && title.top >= 0 && title.bottom <= window.innerHeight),
-      fieldVisible: Boolean(caseNumber && caseNumber.top >= 0 && caseNumber.bottom <= window.innerHeight),
+      fieldVisible: Boolean(plaintiff && plaintiff.top >= 0 && plaintiff.bottom <= window.innerHeight),
+      panelHighlighted: Boolean(panel?.classList.contains("new-hearing-focus")),
       noHorizontalScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
     };
   });
-  assert.equal(formViewport.titleVisible, true);
   assert.equal(formViewport.fieldVisible, true);
+  assert.equal(formViewport.panelHighlighted, true);
   assert.equal(formViewport.noHorizontalScroll, true);
 }
 
